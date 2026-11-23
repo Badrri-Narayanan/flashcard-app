@@ -11,6 +11,7 @@ import FolderDialog from './FolderDialog';
 import LibrarySearch from './LibrarySearch';
 import MovePicker from './MovePicker';
 import ShareDialog from '../share/ShareDialog';
+import ExportMenu, { ExportDialog } from './ExportMenu';
 import OnboardingEmpty from './OnboardingEmpty';
 import type { RowAction } from './RowMenu';
 import TreeView from './TreeView';
@@ -20,6 +21,7 @@ type DialogState =
   | { type: 'deck'; deck?: Deck }
   | { type: 'move'; node: TreeNode }
   | { type: 'share'; deck: Deck }
+  | { type: 'export'; node: TreeNode }
   | null;
 
 function findNode(nodes: TreeNode[], id: Id): TreeNode | undefined {
@@ -66,7 +68,8 @@ export default function LibraryPage() {
     else if (action === 'share') {
       const deck = decks.find((d) => d.id === node.id);
       if (deck) setDialog({ type: 'share', deck });
-    } else if (action === 'move') setDialog({ type: 'move', node });
+    } else if (action === 'export') setDialog({ type: 'export', node });
+    else if (action === 'move') setDialog({ type: 'move', node });
     else if (node.kind === 'folder') setDialog({ type: 'folder', folder: folders.find((f) => f.id === node.id) });
     else setDialog({ type: 'deck', deck: decks.find((d) => d.id === node.id) });
   }
@@ -116,7 +119,8 @@ export default function LibraryPage() {
           <h1 className="text-2xl font-bold">
             {scope ? `${scope.emoji} ${scope.name}` : strings.library.title}
           </h1>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <ExportMenu scope={id ? 'folder' : 'library'} id={id ?? null} />
             <button type="button" onClick={() => setDialog({ type: 'folder' })} className={secondary}>{strings.library.newFolder}</button>
             <button type="button" onClick={() => setDialog({ type: 'deck' })} className={primary}>{strings.library.newDeck}</button>
           </div>
@@ -140,6 +144,7 @@ export default function LibraryPage() {
           onClose={closeDialog}
         />
       )}
+      {dialog?.type === 'export' && <ExportDialog scope={dialog.node.kind} id={dialog.node.id} onClose={closeDialog} />}
       {dialog?.type === 'share' && <ShareDialog deck={dialog.deck} onClose={closeDialog} />}
       <ToastRegion toasts={actions.toasts} onClose={actions.dismissToast} />
     </div>

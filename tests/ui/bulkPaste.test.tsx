@@ -119,10 +119,10 @@ describe('bulk paste dialog', () => {
     expect(screen.getByLabelText('Your list')).toBeInTheDocument();
   });
 
-  it('shows the placeholder page without the dialog when not in paste mode', async () => {
+  it('shows the import hub without the dialog when not in paste mode', async () => {
     const user = userEvent.setup();
     await setup('/import', [mkDeck()]);
-    expect(screen.getByText('More import options coming soon')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Spreadsheet / CSV' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Your list')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Paste a list' }));
     expect(await screen.findByLabelText('Your list')).toBeInTheDocument();

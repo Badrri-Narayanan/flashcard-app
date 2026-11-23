@@ -8,6 +8,7 @@ import ToastRegion from '../components/ToastRegion';
 import { UNDO_TOAST_MS } from '../components/toastTiming';
 import { strings } from '../strings';
 import ShareDialog from '../share/ShareDialog';
+import ExportMenu from '../library/ExportMenu';
 import { plainPreview } from './editorLogic';
 
 interface Toast {
@@ -80,6 +81,7 @@ export default function DeckPage() {
           <h1 className="text-2xl font-bold">{`${deck.emoji} ${deck.name}`}</h1>
           <div className="flex gap-2">
             <Link to={`/study/deck/${id}/learn`} className={secondary}>{strings.deck.study}</Link>
+            <ExportMenu scope="deck" id={id} />
             <button type="button" onClick={() => setSharing(true)} className={secondary}>{strings.deck.share}</button>
             <Link to={addHref} className={primary}>{strings.deck.addCard}</Link>
           </div>

@@ -209,7 +209,7 @@ describe('library', () => {
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     await user.click(await screen.findByRole('button', { name: 'More actions for Two' }));
     await user.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(await screen.findAllByRole('button', { name: 'Undo' })).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Undo' })).toHaveLength(2));
   });
 
   it('menu moves focus in, and Escape returns it to the trigger', async () => {

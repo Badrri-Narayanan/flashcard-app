@@ -15,6 +15,8 @@ interface Props {
   open: boolean;
   onClose: () => void;
   deckId?: Id;
+  /** Loaded as soon as the dialog opens, e.g. a file dropped on the import page. */
+  initialFile?: File;
 }
 
 const NEW_DECK = '__new__';
@@ -33,7 +35,7 @@ function readText(file: File): Promise<string> {
   });
 }
 
-export default function CsvImportDialog({ open, onClose, deckId }: Props) {
+export default function CsvImportDialog({ open, onClose, deckId, initialFile }: Props) {
   const [created, setCreated] = useState<{ count: number; deckId: Id } | null>(null);
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export default function CsvImportDialog({ open, onClose, deckId }: Props) {
       {open && (
         <CsvLoader
           deckId={deckId}
+          initialFile={initialFile}
           onClose={onClose}
           onCreated={(count, target) => {
             setCreated({ count, deckId: target });
@@ -76,11 +79,12 @@ function CsvLoader(props: Omit<FormProps, 'decks'>) {
 interface FormProps {
   decks: Deck[];
   deckId?: Id;
+  initialFile?: File;
   onClose: () => void;
   onCreated: (count: number, deckId: Id) => void;
 }
 
-function CsvForm({ decks, deckId, onClose, onCreated }: FormProps) {
+function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) {
   const [choice, setChoice] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [nameError, setNameError] = useState(false);
@@ -118,6 +122,13 @@ function CsvForm({ decks, deckId, onClose, onCreated }: FormProps) {
       setFileError(strings.csv.readFailed);
     }
   }
+
+  useEffect(() => {
+    if (!initialFile) return;
+    const t = setTimeout(() => void load(initialFile), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the file present at mount is auto-loaded
+  }, []);
 
   function onDrop(e: DragEvent) {
     e.preventDefault();

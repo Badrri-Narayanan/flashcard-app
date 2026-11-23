@@ -13,6 +13,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   deckId?: Id;
+  initialText?: string;
 }
 
 const NEW_DECK = '__new__';
@@ -28,7 +29,7 @@ function termKey(sep: TermSep): string {
   return typeof sep === 'string' ? sep : CUSTOM;
 }
 
-export default function BulkPasteDialog({ open, onClose, deckId }: Props) {
+export default function BulkPasteDialog({ open, onClose, deckId, initialText }: Props) {
   const [created, setCreated] = useState<{ count: number; deckId: Id } | null>(null);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function BulkPasteDialog({ open, onClose, deckId }: Props) {
       {open && (
         <BulkPasteLoader
           deckId={deckId}
+          initialText={initialText}
           onClose={onClose}
           onCreated={(count, target) => {
             setCreated({ count, deckId: target });
@@ -71,15 +73,16 @@ function BulkPasteLoader(props: Omit<FormProps, 'decks'>) {
 interface FormProps {
   decks: Deck[];
   deckId?: Id;
+  initialText?: string;
   onClose: () => void;
   onCreated: (count: number, deckId: Id) => void;
 }
 
-function BulkPasteForm({ decks, deckId, onClose, onCreated }: FormProps) {
+function BulkPasteForm({ decks, deckId, initialText, onClose, onCreated }: FormProps) {
   const [choice, setChoice] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [nameError, setNameError] = useState(false);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText ?? '');
   const [termSel, setTermSel] = useState<string>(' - ');
   const [customSep, setCustomSep] = useState('');
   const [card, setCard] = useState<CardSep>('newline');
