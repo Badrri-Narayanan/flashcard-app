@@ -1,27 +1,18 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/data/db';
 import { repo } from '../../src/data/repo';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
-import type { Card, Deck } from '../../src/domain/types';
+import type { Card, Deck, ReviewItem } from '../../src/domain/types';
 import { DEFAULT_SETTINGS, SettingsContext, type AppSettings } from '../../src/ui/settings/settings';
 import { routes } from '../../src/ui/routes';
 import { cardFaces } from '../../src/ui/study/faces';
 import { swipeDecision } from '../../src/ui/study/swipe';
 
 afterEach(cleanup);
-
-// jsdom has no pointer capture; use-gesture calls it on pointerdown.
-beforeAll(() => {
-  Object.assign(HTMLElement.prototype, {
-    setPointerCapture: () => undefined,
-    releasePointerCapture: () => undefined,
-    hasPointerCapture: () => false,
-  });
-});
 
 beforeEach(async () => {
   await db.delete();
@@ -118,7 +109,7 @@ describe('learn mode', () => {
     await user.keyboard(' ');
     await screen.findByRole('group', { name: 'Rate your answer' });
 
-    const card = screen.getByRole('button', { name: 'Flip card' });
+    const card = screen.getByRole('region', { name: 'Card' });
     const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientY: 100 };
     fireEvent.pointerDown(card, { ...pointer, clientX: 220 });
     fireEvent.pointerMove(card, { ...pointer, clientX: 150 });
@@ -133,7 +124,7 @@ describe('learn mode', () => {
     const { deck } = await seed(1);
     renderAt(`/study/deck/${deck.id}/learn`);
     await currentQuestion();
-    const card = screen.getByRole('button', { name: 'Flip card' });
+    const card = screen.getByRole('region', { name: 'Card' });
     const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientY: 100 };
     fireEvent.pointerDown(card, { ...pointer, clientX: 100 });
     fireEvent.pointerMove(card, { ...pointer, clientX: 160 });
@@ -289,7 +280,149 @@ describe('learn mode', () => {
   });
 });
 
+describe('learn mode: review fixes', () => {
+  it('exposes the question in a card region and the revealed answer in a live region', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(1);
+    renderAt(`/study/deck/${deck.id}/learn`);
+    const region = await screen.findByRole('region', { name: 'Card' });
+    expect(within(region).getByText('question 1')).toBeInTheDocument();
+    expect(region.closest('[role="button"]')).toBeNull();
+    await user.keyboard(' ');
+    const answer = await within(region).findByText('answer 1');
+    expect(answer.closest('[aria-live="polite"]')).not.toBeNull();
+    expect(screen.queryByRole('button', { pressed: true })).toBeNull();
+  });
+
+  it('two rapid 3 presses and a double-click on Good write exactly one log', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(3);
+    renderAt(`/study/deck/${deck.id}/learn`);
+    await currentQuestion();
+    await user.keyboard(' ');
+    await user.keyboard('33');
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(await repo.listLogs()).toHaveLength(1);
+
+    await currentQuestion();
+    await user.keyboard(' ');
+    await user.dblClick(await screen.findByRole('button', { name: /Good/ }));
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(2));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(await repo.listLogs()).toHaveLength(2);
+  });
+
+  it('new cards are fetched per deck so a big old deck cannot starve another', async () => {
+    const user = userEvent.setup();
+    const a = mkDeck({ name: 'Old' }, { newPerDay: 3 });
+    const b = mkDeck({ name: 'Newer' }, { newPerDay: 3 });
+    await repo.saveDeck(a);
+    await repo.saveDeck(b);
+    for (let i = 0; i < 50; i++) await repo.saveCard(mkCard(a.id, { front: `question A${i}` }));
+    for (let i = 0; i < 5; i++) await repo.saveCard(mkCard(b.id, { front: `question B${i}` }));
+    const items = await db.reviewItems.toArray();
+    await Promise.all(items.map((it: ReviewItem) => db.reviewItems.update(it.id, { due: it.deckId === a.id ? 1000 : 2000 })));
+    renderAt('/study/folder/all/learn');
+    await screen.findByText(/^question [AB]\d+$/);
+    const seen = { A: 0, B: 0 };
+    for (let i = 0; i < 6; i++) {
+      const q = (await screen.findByText(/^question [AB]\d+$/)).textContent!;
+      seen[q.includes('A') ? 'A' : 'B']++;
+      await user.keyboard(' ');
+      await user.keyboard('4');
+      await waitFor(() => expect(screen.queryByText(q)).not.toBeInTheDocument());
+    }
+    expect(seen).toEqual({ A: 3, B: 3 });
+  });
+
+  it('summary offers Undo last answer, which returns to the session', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(1);
+    renderAt(`/study/deck/${deck.id}/learn`);
+    await currentQuestion();
+    await user.keyboard(' ');
+    await user.keyboard('4');
+    await screen.findByText('Session complete');
+    await user.click(screen.getByRole('button', { name: 'Undo last answer' }));
+    await currentQuestion();
+    expect(await repo.listLogs()).toHaveLength(0);
+  });
+
+  it('undo after a requeued answer restores the item and allows one fresh answer', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(2);
+    renderAt(`/study/deck/${deck.id}/learn`);
+    const q = await currentQuestion();
+    await user.keyboard(' ');
+    await user.keyboard('1');
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
+    await user.keyboard('z');
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(0));
+    await waitFor(() => expect(screen.getByText(q)).toBeInTheDocument());
+    await user.keyboard(' ');
+    await user.keyboard('3');
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
+  });
+
+  it('a save failure shows a toast and keeps the session', async () => {
+    const user = userEvent.setup();
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { deck } = await seed(1);
+    renderAt(`/study/deck/${deck.id}/learn`);
+    const q = await currentQuestion();
+    const spy = vi.spyOn(repo, 'saveReview').mockRejectedValueOnce(new Error('boom'));
+    await user.keyboard(' ');
+    await user.keyboard('3');
+    expect(await screen.findByText(/Couldn.t save/)).toBeInTheDocument();
+    expect(screen.getByText(q)).toBeInTheDocument();
+    spy.mockRestore();
+    await user.keyboard('3');
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
+    errors.mockRestore();
+  });
+
+  it('says Daily limit reached when the new-card limit is used up', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(3, { newPerDay: 1 });
+    renderAt(`/study/deck/${deck.id}/learn`);
+    await currentQuestion();
+    await user.keyboard(' ');
+    await user.keyboard('4');
+    await screen.findByText('Session complete');
+    cleanup();
+    renderAt(`/study/deck/${deck.id}/learn`);
+    expect(await screen.findByText('Daily limit reached')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Study more' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Cram anyway' })).toBeInTheDocument();
+  });
+});
+
 describe('cram mode', () => {
+  it('double-tapping Got it writes one log; swiping right marks Got it', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(3);
+    renderAt(`/study/deck/${deck.id}/cram`);
+    await currentQuestion();
+    await user.keyboard(' ');
+    await user.dblClick(await screen.findByRole('button', { name: 'Got it' }));
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(await repo.listLogs()).toHaveLength(1);
+
+    await currentQuestion();
+    await user.keyboard(' ');
+    await screen.findByRole('button', { name: 'Got it' });
+    const card = screen.getByRole('region', { name: 'Card' });
+    const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientY: 100 };
+    fireEvent.pointerDown(card, { ...pointer, clientX: 100 });
+    fireEvent.pointerMove(card, { ...pointer, clientX: 160 });
+    fireEvent.pointerMove(card, { ...pointer, clientX: 220 });
+    fireEvent.pointerUp(card, { ...pointer, buttons: 0, clientX: 220 });
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(2));
+    expect((await repo.listLogs()).every((l) => l.correct)).toBe(true);
+  });
+
   it('writes cram logs with null rating and never changes review items', async () => {
     const user = userEvent.setup();
     const { deck } = await seed(2);

@@ -9,6 +9,8 @@ export interface LoadedQueue {
   queue: ReviewItem[];
   /** Earliest scheduled review among these decks (clamped to now); null when nothing is scheduled. */
   nextDueAt: number | null;
+  /** True when the queue is empty only because today's per-deck limits are used up. */
+  limitReached: boolean;
 }
 
 /** Builds today's Learn queue for the decks, respecting per-deck daily budgets (+extraNew for "Study more"). */
@@ -30,8 +32,10 @@ export async function loadLearnQueue(
 
   const until = endOfStudyDay(now, dayStartHour);
   const dueLists = await Promise.all(budgets.map((b) => repo.getDueItems([b.deckId], until, b.reviewsLeft)));
-  const newLimit = budgets.reduce((sum, b) => sum + b.newLeft, 0);
-  const fresh = newLimit > 0 ? await repo.getNewItems(liveIds, newLimit) : [];
+  const freshLists = await Promise.all(
+    budgets.map((b) => (b.newLeft > 0 ? repo.getNewItems([b.deckId], b.newLeft) : Promise.resolve([]))),
+  );
+  const fresh = freshLists.flat();
   const queue = buildLearnQueue({ due: dueLists.flat(), fresh, budgets, seed: Date.now() });
 
   let nextDueAt: number | null = null;
@@ -39,7 +43,17 @@ export async function loadLearnQueue(
     const upcoming = await repo.getDueItems(liveIds, NO_UPCOMING_UNTIL, 1);
     if (upcoming.length > 0) nextDueAt = Math.max(now, upcoming[0].due);
   }
-  return { queue, nextDueAt };
+  let limitReached = false;
+  if (queue.length === 0) {
+    const checks = await Promise.all(
+      budgets.map(async (b) => {
+        if (b.newLeft === 0 && (await repo.getNewItems([b.deckId], 1)).length > 0) return true;
+        return b.reviewsLeft === 0 && (await repo.getDueItems([b.deckId], until, 1)).length > 0;
+      }),
+    );
+    limitReached = checks.some(Boolean);
+  }
+  return { queue, nextDueAt, limitReached };
 }
 
 /** True when unseen cards remain (i.e. beyond whatever today's budget let into the session). */

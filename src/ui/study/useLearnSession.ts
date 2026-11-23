@@ -7,6 +7,7 @@ import { requeue } from '../../domain/queue';
 import { previewIntervals, rate } from '../../domain/scheduler';
 import type { Card, Confidence, Deck, Id, Rating, ReviewItem, ReviewLog } from '../../domain/types';
 import { useSettings } from '../settings/settings';
+import { strings } from '../strings';
 import { hasUnseenNew, loadLearnQueue } from './loadLearnQueue';
 
 const STUDY_MORE_NEW = 10;
@@ -47,8 +48,11 @@ export interface LearnSession {
   finished: boolean;
   stats: { studied: number; correct: number; answers: number; timeMs: number };
   nextDueAt: number | null;
+  limitReached: boolean;
   moreNewAvailable: boolean;
   studyMore(): void;
+  notice: { id: number; message: string } | null;
+  clearNotice(): void;
 }
 
 const isLive = (r: { deletedAt: number | null } | undefined): boolean => !!r && r.deletedAt === null;
@@ -66,11 +70,17 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
   const [completed, setCompleted] = useState(0);
   const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   const [nextDueAt, setNextDueAt] = useState<number | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
+  const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
   const [moreNewAvailable, setMoreNewAvailable] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const extraNew = useRef(0);
   const shownAt = useRef(0);
   const busy = useRef(false);
+  const answeredItem = useRef<ReviewItem | null>(null);
+  const undoneLog = useRef<Id | null>(null);
+  const noticeId = useRef(0);
+  const showNotice = useCallback((message: string) => setNotice({ id: ++noticeId.current, message }), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +89,7 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
         if (cancelled) return;
         setQueue(result.queue);
         setNextDueAt(result.nextDueAt);
+        setLimitReached(result.limitReached);
         setUndoEntry(null);
         setLoaded(true);
       })
@@ -138,11 +149,22 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
 
   const answer = useCallback(
     async (rating: Rating) => {
-      if (!current || busy.current) return;
+      if (!current || busy.current || answeredItem.current === current.item) return;
       busy.current = true;
       try {
-        const at = Date.now();
         const previous = current.item;
+        const [liveCard, liveItems] = await Promise.all([
+          repo.getCard(previous.cardId),
+          repo.getReviewItemsForCard(previous.cardId),
+        ]);
+        if (!isLive(liveCard) || !liveItems.some((i) => i.id === previous.id)) {
+          setQueue((q) => q.filter((i) => i.id !== previous.id));
+          setRevealed(false);
+          setConfidenceState(null);
+          return;
+        }
+        answeredItem.current = previous;
+        const at = Date.now();
         const next = rate(previous, rating, at);
         const durationMs = Math.max(0, at - shownAt.current);
         const log: ReviewLog = {
@@ -177,36 +199,41 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
         }
       } catch (err) {
         console.error('Failed to save review', err);
-        setError(true);
+        answeredItem.current = null;
+        showNotice(strings.study.saveFailed);
       } finally {
         busy.current = false;
       }
     },
-    [current, queue, confidence, dayStartHour],
+    [current, queue, confidence, dayStartHour, showNotice],
   );
 
   const undo = useCallback(async () => {
-    if (!undoEntry || busy.current) return;
+    if (!undoEntry || busy.current || undoneLog.current === undoEntry.log.id) return;
     busy.current = true;
     try {
-      const { previous, log, answer: undone, completed: wasCompleted } = undoEntry;
+      const { previous, log, completed: wasCompleted } = undoEntry;
+      undoneLog.current = log.id;
+      const stillLive = (await repo.getReviewItemsForCard(previous.cardId)).some((i) => i.id === previous.id);
       await repo.transaction(async () => {
-        await repo.saveReview(previous, log);
+        if (stillLive) await repo.saveReview(previous, log);
         await repo.deleteLog(log.id);
       });
-      setQueue((q) => [previous, ...q.filter((i) => i.id !== previous.id)]);
+      answeredItem.current = null;
+      if (stillLive) setQueue((q) => [previous, ...q.filter((i) => i.id !== previous.id)]);
       setAnswers((a) => a.slice(0, -1));
       setCompleted((c) => c - (wasCompleted ? 1 : 0));
       setRevealed(false);
       setConfidenceState(null);
       setUndoEntry(null);
-      shownAt.current = Date.now() - undone.durationMs;
     } catch (err) {
       console.error('Failed to undo', err);
+      undoneLog.current = null;
+      showNotice(strings.study.undoFailed);
     } finally {
       busy.current = false;
     }
-  }, [undoEntry]);
+  }, [undoEntry, showNotice]);
 
   const studyMore = useCallback(() => {
     extraNew.current += STUDY_MORE_NEW;
@@ -236,7 +263,10 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
       timeMs: answers.reduce((sum, a) => sum + a.durationMs, 0),
     },
     nextDueAt,
+    limitReached,
     moreNewAvailable,
     studyMore,
+    notice,
+    clearNotice: useCallback(() => setNotice(null), []),
   };
 }

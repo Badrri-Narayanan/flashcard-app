@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 type KeyMap = Record<string, () => void>;
 
@@ -7,13 +7,13 @@ const IGNORED_TARGETS = 'input, textarea, select, [contenteditable="true"], dial
 /** Window-level shortcuts for study screens. Keys are `event.key` (letters lowercase, Space is ' '). */
 export function useStudyKeys(map: KeyMap, enabled = true): void {
   const latest = useRef(map);
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = map;
   });
   useEffect(() => {
     if (!enabled) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target instanceof Element ? e.target : null;
       if (target?.closest(IGNORED_TARGETS)) return;
       // Let focused buttons/links keep their native Space/Enter activation.

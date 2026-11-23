@@ -1,5 +1,5 @@
 import { useDrag } from '@use-gesture/react';
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState } from 'react';
 import type { Rating } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import { useSettings } from '../settings/settings';
@@ -71,9 +71,6 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
     }
     onFlip();
   };
-  const handleKey = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') onFlip();
-  };
 
   const progress = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD_PX);
   const showOverlay = swipeGestures && revealed && dx !== 0;
@@ -84,16 +81,17 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
   };
 
   return (
+    <div className="relative">
+      <button type="button" onClick={onFlip} className="sr-only focus:not-sr-only focus:mb-2 focus:rounded focus:bg-slate-200 focus:px-2 focus:py-1 focus:text-sm dark:focus:bg-slate-800">
+        {strings.study.flipCard}
+      </button>
     <div
       {...bind()}
-      role="button"
-      tabIndex={0}
-      aria-label={strings.study.flipCard}
-      aria-pressed={revealed}
+      role="region"
+      aria-label={strings.study.card}
       onClick={handleClick}
-      onKeyDown={handleKey}
       style={style}
-      className="relative cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+      className="relative cursor-pointer select-none"
     >
       {animate ? (
         <div className="[perspective:1200px]">
@@ -106,6 +104,7 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
             </div>
             <div
               aria-hidden={!revealed}
+              aria-live="polite"
               className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1] [transform:rotateY(180deg)]`}
             >
               <BackFace faces={faces} mnemonic={mnemonic} />
@@ -113,7 +112,7 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
           </div>
         </div>
       ) : (
-        <div className={faceClass}>{revealed ? <BackFace faces={faces} mnemonic={mnemonic} /> : <FrontFace faces={faces} />}</div>
+        <div aria-live="polite" className={faceClass}>{revealed ? <BackFace faces={faces} mnemonic={mnemonic} /> : <FrontFace faces={faces} />}</div>
       )}
       {showOverlay && (
         <div
@@ -127,6 +126,7 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
           {good ? strings.study.swipeGood : strings.study.swipeAgain}
         </div>
       )}
+    </div>
     </div>
   );
 }

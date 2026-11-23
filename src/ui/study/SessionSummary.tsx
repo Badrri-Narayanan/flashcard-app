@@ -9,11 +9,12 @@ interface Props {
   timeMs: number;
   backTo: string;
   onStudyMore?: () => void;
+  onUndo?: () => void;
 }
 
 const button = 'inline-flex min-h-11 items-center justify-center rounded-lg px-5 font-medium';
 
-export default function SessionSummary({ studied, accuracy, timeMs, backTo, onStudyMore }: Props) {
+export default function SessionSummary({ studied, accuracy, timeMs, backTo, onStudyMore, onUndo }: Props) {
   const s = strings.study.summary;
   const stats: [string, string][] = [
     [s.studied, String(studied)],
@@ -35,6 +36,11 @@ export default function SessionSummary({ studied, accuracy, timeMs, backTo, onSt
         {onStudyMore && (
           <button type="button" onClick={onStudyMore} className={`${button} bg-accent-600 text-white hover:bg-accent-700`}>
             {s.studyMore}
+          </button>
+        )}
+        {onUndo && (
+          <button type="button" onClick={onUndo} className={`${button} border border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800`}>
+            {strings.study.undoLabel}
           </button>
         )}
         <Link to={backTo} className={`${button} border border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800`}>

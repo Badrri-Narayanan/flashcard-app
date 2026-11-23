@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { repo } from '../../data/repo';
 import { dayKey } from '../../domain/day';
 import { baseRecord } from '../../domain/ids';
+import { strings } from '../strings';
 import type { Card, Deck, Id, ReviewLog } from '../../domain/types';
 import { useSettings } from '../settings/settings';
 
@@ -30,6 +31,8 @@ export interface CramSession {
   prev(): void;
   mark(correct: boolean): Promise<void>;
   finished: boolean;
+  notice: { id: number; message: string } | null;
+  clearNotice(): void;
   stats: { studied: number; correct: number; timeMs: number };
 }
 
@@ -43,6 +46,9 @@ export function useCramSession(deckIds: Id[]): CramSession {
   const [marks, setMarks] = useState<{ correct: boolean; ms: number }[]>([]);
   const [finished, setFinished] = useState(false);
   const shownAt = useRef(0);
+  const busy = useRef(false);
+  const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
+  const noticeId = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,27 +81,37 @@ export function useCramSession(deckIds: Id[]): CramSession {
   const mark = useCallback(
     async (correct: boolean) => {
       const entry = list[index];
-      if (!entry) return;
-      const at = Date.now();
-      const durationMs = Math.max(0, at - shownAt.current);
-      const items = await repo.getReviewItemsForCard(entry.card.id);
-      const log: ReviewLog = {
-        ...baseRecord(),
-        reviewItemId: items[0]?.id ?? entry.card.id,
-        cardId: entry.card.id,
-        deckId: entry.card.deckId,
-        mode: 'cram',
-        rating: null,
-        correct,
-        confidence: null,
-        durationMs,
-        at,
-        dayKey: dayKey(at, dayStartHour),
-      };
-      await repo.saveReview(null, log);
-      setMarks((m) => [...m, { correct, ms: durationMs }]);
-      if (index + 1 >= list.length) setFinished(true);
-      else go(index + 1);
+      if (!entry || busy.current) return;
+      busy.current = true;
+      try {
+        const at = Date.now();
+        const durationMs = Math.max(0, at - shownAt.current);
+        const [item] = await repo.getReviewItemsForCard(entry.card.id);
+        if (item) {
+          const log: ReviewLog = {
+            ...baseRecord(),
+            reviewItemId: item.id,
+            cardId: entry.card.id,
+            deckId: entry.card.deckId,
+            mode: 'cram',
+            rating: null,
+            correct,
+            confidence: null,
+            durationMs,
+            at,
+            dayKey: dayKey(at, dayStartHour),
+          };
+          await repo.saveReview(null, log);
+        }
+        setMarks((m) => [...m, { correct, ms: durationMs }]);
+        if (index + 1 >= list.length) setFinished(true);
+        else go(index + 1);
+      } catch (err) {
+        console.error('Failed to save cram result', err);
+        setNotice({ id: ++noticeId.current, message: strings.study.saveFailed });
+      } finally {
+        busy.current = false;
+      }
     },
     [list, index, dayStartHour, go],
   );
@@ -114,6 +130,8 @@ export function useCramSession(deckIds: Id[]): CramSession {
       if (index > 0) go(index - 1);
     }, [index, go]),
     mark,
+    notice,
+    clearNotice: () => setNotice(null),
     finished,
     stats: {
       studied: marks.length,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Id } from '../../domain/types';
+import ToastRegion from '../components/ToastRegion';
 import { strings } from '../strings';
 import { cardFaces, cramVariant } from './faces';
 import FlipCard from './FlipCard';
@@ -70,7 +71,7 @@ export default function CramMode({ deckIds, backTo }: Props) {
       <p className="text-center text-sm text-slate-600 dark:text-slate-400">{c.position(s.index + 1, s.entries.length)}</p>
       <div className="flex flex-1 flex-col justify-center">
         {current && faces && (
-          <FlipCard key={current.card.id} faces={faces} mnemonic={current.card.mnemonic} revealed={s.revealed} onFlip={s.flip} />
+          <FlipCard key={current.card.id} faces={faces} mnemonic={current.card.mnemonic} revealed={s.revealed} onFlip={s.flip} onSwipeRate={(r) => mark(r === 3)} />
         )}
       </div>
       <div className="space-y-3 pb-2">
@@ -95,6 +96,7 @@ export default function CramMode({ deckIds, backTo }: Props) {
           </button>
         </div>
       </div>
+      <ToastRegion toasts={s.notice ? [{ ...s.notice, durationMs: 4000 }] : []} onClose={s.clearNotice} />
       {helpOpen && <KeyboardHelp mode="cram" onClose={() => setHelpOpen(false)} />}
     </div>
   );

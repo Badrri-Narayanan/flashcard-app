@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ToastRegion from '../components/ToastRegion';
 import { strings } from '../strings';
 import AllCaughtUp from './AllCaughtUp';
 import ConfidencePrompt from './ConfidencePrompt';
@@ -30,7 +31,7 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
   };
   useStudyKeys(
     {
-      ' ': s.reveal,
+      ' ': () => current && s.reveal(),
       '1': () => rate(1),
       '2': () => rate(2),
       '3': () => rate(3),
@@ -38,13 +39,20 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
       z: () => void s.undo(),
       '?': () => setHelpOpen(true),
     },
-    !s.finished,
   );
 
   if (s.error) return <p role="alert" className="p-8 text-center">{strings.study.loadFailed}</p>;
   if (s.loading) return <p className="p-8 text-center">{strings.common.loading}</p>;
   if (s.finished) {
-    if (s.stats.answers === 0) return <AllCaughtUp nextDueAt={s.nextDueAt} backTo={backTo} cramHref={cramHref} />;
+    if (s.stats.answers === 0) return (
+        <AllCaughtUp
+          nextDueAt={s.nextDueAt}
+          backTo={backTo}
+          cramHref={cramHref}
+          limitReached={s.limitReached}
+          onStudyMore={s.limitReached && s.moreNewAvailable ? s.studyMore : undefined}
+        />
+      );
     return (
       <SessionSummary
         studied={s.stats.studied}
@@ -52,6 +60,7 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
         timeMs={s.stats.timeMs}
         backTo={backTo}
         onStudyMore={s.moreNewAvailable ? s.studyMore : undefined}
+        onUndo={s.canUndo ? () => void s.undo() : undefined}
       />
     );
   }
@@ -95,12 +104,13 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
                 className="min-h-12 w-full rounded-xl bg-accent-600 font-medium text-white hover:bg-accent-700"
               >
                 {strings.study.show}
-                {hints && <kbd className="ms-2 rounded bg-white/20 px-1.5 text-xs">Space</kbd>}
+                {hints && <kbd aria-hidden className="ms-2 rounded bg-white/20 px-1.5 text-xs">Space</kbd>}
               </button>
             </>
           )}
         </div>
       )}
+      <ToastRegion toasts={s.notice ? [{ ...s.notice, durationMs: 4000 }] : []} onClose={s.clearNotice} />
       {helpOpen && <KeyboardHelp mode="learn" onClose={() => setHelpOpen(false)} />}
     </div>
   );
