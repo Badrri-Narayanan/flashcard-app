@@ -10,7 +10,7 @@ const NEW_EVERY_N_REVIEWS = 4;
 const REQUEUE_WINDOW_MS = 20 * 60_000;
 const MINUTE_MS = 60_000;
 
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;

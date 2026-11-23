@@ -43,3 +43,9 @@ export function renderCloze(text: string, n: number, reveal: boolean): string {
   }
   return out + text.slice(pos);
 }
+
+/** The first blank in reading order, or null when the text has none. */
+export function firstClozeBlank(text: string): { n: number; answer: string } | null {
+  const [blank] = parseBlanks(text);
+  return blank ? { n: blank.n, answer: blank.answer } : null;
+}

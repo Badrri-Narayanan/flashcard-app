@@ -2,7 +2,7 @@ import Dialog from '../components/Dialog';
 import { strings } from '../strings';
 
 interface Props {
-  mode: 'learn' | 'cram';
+  mode: 'learn' | 'cram' | 'quiz';
   onClose(): void;
 }
 
@@ -16,7 +16,13 @@ export default function KeyboardHelp({ mode, onClose }: Props) {
           ['Z', k.undo],
           ['?', k.help],
         ]
-      : [
+      : mode === 'quiz'
+        ? [
+            ['1 2 3 4', k.quizPick],
+            ['Enter / Space', k.quizNext],
+            ['?', k.help],
+          ]
+        : [
           ['Space', k.flip],
           ['1 / 3', k.cramMark],
           ['← →', k.cramNav],

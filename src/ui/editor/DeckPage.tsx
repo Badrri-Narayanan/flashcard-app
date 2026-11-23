@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { repo } from '../../data/repo';
+import { canQuiz } from '../../domain/distractors';
 import { SearchIndex } from '../../domain/search';
 import type { Card } from '../../domain/types';
 import ToastRegion from '../components/ToastRegion';
@@ -73,6 +74,7 @@ export default function DeckPage() {
     }
   }
 
+  const quizReady = canQuiz(cards);
   const addHref = `/deck/${id}/edit`;
   return (
     <div className="mx-auto max-w-3xl space-y-4 px-4 py-4">
@@ -81,11 +83,21 @@ export default function DeckPage() {
           <h1 className="text-2xl font-bold">{`${deck.emoji} ${deck.name}`}</h1>
           <div className="flex gap-2">
             <Link to={`/study/deck/${id}/learn`} className={secondary}>{strings.deck.study}</Link>
+            {quizReady ? (
+              <Link to={`/study/deck/${id}/quiz`} className={secondary}>{strings.study.quiz.entry}</Link>
+            ) : (
+              <button type="button" disabled aria-describedby="quiz-needs-cards" className={`${secondary} opacity-50`}>
+                {strings.study.quiz.entry}
+              </button>
+            )}
             <ExportMenu scope="deck" id={id} />
             <button type="button" onClick={() => setSharing(true)} className={secondary}>{strings.deck.share}</button>
             <Link to={addHref} className={primary}>{strings.deck.addCard}</Link>
           </div>
         </div>
+        {!quizReady && (
+          <p id="quiz-needs-cards" className="text-sm text-slate-600 dark:text-slate-400">{strings.study.quiz.needMoreCards}</p>
+        )}
         {cards.length > 0 && (
           <>
             <p className="text-sm text-slate-600 dark:text-slate-400">{strings.deck.count(cards.length)}</p>

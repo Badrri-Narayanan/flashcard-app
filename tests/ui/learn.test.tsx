@@ -486,7 +486,7 @@ describe('study home', () => {
 
   it('other modes render the coming soon note', async () => {
     const { deck } = await seed(1);
-    renderAt(`/study/deck/${deck.id}/quiz`);
+    renderAt(`/study/deck/${deck.id}/match`);
     expect(await screen.findByRole('heading', { name: 'Coming soon' })).toBeInTheDocument();
   });
 
