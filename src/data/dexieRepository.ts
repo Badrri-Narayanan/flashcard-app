@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { baseRecord, now, touch } from '../domain/ids';
+import { newReviewItem } from '../domain/scheduler';
 import { reconcileVariants } from '../domain/variants';
 import type {
   Card,
@@ -17,21 +18,7 @@ import { StorageFullError, type Repository } from './repository';
 const SUSPENDED_DUE = Number.MAX_SAFE_INTEGER;
 
 function createReviewItem(card: Card, variant: Variant): ReviewItem {
-  return {
-    ...baseRecord(),
-    cardId: card.id,
-    deckId: card.deckId,
-    variant,
-    due: card.suspended ? SUSPENDED_DUE : now(),
-    stability: 0,
-    difficulty: 0,
-    elapsedDays: 0,
-    scheduledDays: 0,
-    reps: 0,
-    lapses: 0,
-    state: 0,
-    lastReview: null,
-  };
+  return newReviewItem(card.id, card.deckId, variant, card.suspended);
 }
 
 function isQuotaError(err: unknown): boolean {

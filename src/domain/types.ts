@@ -65,6 +65,7 @@ export interface ReviewItem extends BaseRecord {
   scheduledDays: number;
   reps: number;
   lapses: number;
+  learningSteps?: number;
   state: 0 | 1 | 2 | 3;
   lastReview: number | null;
 }
