@@ -5,3 +5,7 @@ coverage/
 test-results/
 playwright-report/
 .DS_Store
+*.local
+*.tsbuildinfo
+dev-dist/
+npm-debug.log*
