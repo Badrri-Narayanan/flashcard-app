@@ -15,3 +15,11 @@ export function endOfStudyDay(at: number, dayStartHour: number): number {
   if (boundary <= at) boundary = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, dayStartHour).getTime();
   return boundary;
 }
+
+/** Epoch ms of the most recent local boundary at `dayStartHour` at or before `at`. */
+export function startOfStudyDay(at: number, dayStartHour: number): number {
+  const d = new Date(at);
+  let boundary = new Date(d.getFullYear(), d.getMonth(), d.getDate(), dayStartHour).getTime();
+  if (boundary > at) boundary = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, dayStartHour).getTime();
+  return boundary;
+}

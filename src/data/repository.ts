@@ -43,6 +43,10 @@ export interface Repository {
   countDue(deckId: Id, until: number): Promise<{ due: number; new: number }>;
   saveReview(item: ReviewItem | null, log: ReviewLog): Promise<void>;
   listLogs(range?: { from: number; to: number }, deckIds?: Id[]): Promise<ReviewLog[]>;
+  /** Earliest `at` among live learn-mode logs per review item; items with no learn log are absent. */
+  getFirstLearnLogTimes(reviewItemIds: Id[]): Promise<Map<Id, number>>;
+  /** Soft-deletes one log (used by undo). */
+  deleteLog(id: Id): Promise<void>;
 
   putMedia(m: Media): Promise<void>;
   getMedia(id: Id): Promise<Media | undefined>;

@@ -261,4 +261,32 @@ describe('DexieRepository', () => {
     expect((await repo.getReviewItemsForCard(card.id)).map((i) => i.variant)).toEqual(['fwd']);
     expect(await repo.getReviewItemsForCard('missing')).toEqual([]);
   });
+
+  it('getFirstLearnLogTimes returns the earliest live learn log per item; deleteLog removes a log', async () => {
+    const deck = mkDeck();
+    await repo.saveDeck(deck);
+    const card = mkCard(deck.id, { type: 'reversible' });
+    await repo.saveCard(card);
+    const [a, b] = await db.reviewItems.toArray();
+    const mk = (itemId: string, at: number, mode: 'learn' | 'cram') => ({
+      ...baseRecord(), reviewItemId: itemId, cardId: card.id, deckId: deck.id, mode,
+      rating: mode === 'learn' ? (3 as const) : null, correct: true, confidence: null, durationMs: 1, at, dayKey: 'k',
+    });
+    const late = mk(a.id, 900, 'learn');
+    const early = mk(a.id, 300, 'learn');
+    await repo.saveReview(null, late);
+    await repo.saveReview(null, early);
+    await repo.saveReview(null, mk(a.id, 100, 'cram'));
+    await repo.saveReview(null, mk(b.id, 500, 'cram'));
+
+    let first = await repo.getFirstLearnLogTimes([a.id, b.id]);
+    expect(first.get(a.id)).toBe(300);
+    expect(first.has(b.id)).toBe(false);
+
+    await repo.deleteLog(early.id);
+    first = await repo.getFirstLearnLogTimes([a.id]);
+    expect(first.get(a.id)).toBe(900);
+    expect((await repo.listLogs()).map((l) => l.id)).not.toContain(early.id);
+    expect(await repo.getFirstLearnLogTimes([])).toEqual(new Map());
+  });
 });

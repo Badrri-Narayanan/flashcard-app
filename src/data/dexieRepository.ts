@@ -326,6 +326,23 @@ export class DexieRepository implements Repository {
     return logs.filter((l) => isLive(l) && (!decks || decks.has(l.deckId)));
   }
 
+  async getFirstLearnLogTimes(reviewItemIds: Id[]): Promise<Map<Id, number>> {
+    const logs = await this.db.reviewLogs.where('reviewItemId').anyOf(reviewItemIds).toArray();
+    const first = new Map<Id, number>();
+    for (const l of logs) {
+      if (!isLive(l) || l.mode !== 'learn') continue;
+      const prev = first.get(l.reviewItemId);
+      if (prev === undefined || l.at < prev) first.set(l.reviewItemId, l.at);
+    }
+    return first;
+  }
+
+  deleteLog(id: Id): Promise<void> {
+    return this.write(async () => {
+      await this.db.reviewLogs.update(id, { deletedAt: now() });
+    });
+  }
+
   // media
   async getReviewItemsForCard(cardId: Id): Promise<ReviewItem[]> {
     return (await this.db.reviewItems.where('cardId').equals(cardId).toArray()).filter(isLive);

@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { repo } from '../../data/repo';
 import { buildTree, descendantDeckIds, type TreeNode } from '../../domain/tree';
+import { endOfStudyDay } from '../../domain/day';
 import type { Deck, Folder, Id } from '../../domain/types';
+import { DEFAULT_SETTINGS, SettingsContext } from '../settings/settings';
 
 export type DueCounts = Record<Id, { due: number; new: number }>;
 
@@ -17,9 +19,9 @@ const EMPTY_DECKS: Deck[] = [];
 const EMPTY_TREE: TreeNode[] = [];
 const EMPTY_COUNTS: DueCounts = {};
 
-async function load(): Promise<Snapshot> {
+async function load(dayStartHour: number): Promise<Snapshot> {
   const [folders, decks] = await Promise.all([repo.listFolders(), repo.listDecks()]);
-  const until = Date.now();
+  const until = endOfStudyDay(Date.now(), dayStartHour);
   const counts = await Promise.all(decks.map((d) => repo.countDue(d.id, until)));
   const dueCounts: DueCounts = {};
   decks.forEach((d, i) => {
@@ -38,7 +40,8 @@ async function load(): Promise<Snapshot> {
 }
 
 export function useLibrary() {
-  const snapshot = useLiveQuery(load, []);
+  const dayStartHour = (useContext(SettingsContext)?.[0] ?? DEFAULT_SETTINGS).dayStartHour;
+  const snapshot = useLiveQuery(() => load(dayStartHour), [dayStartHour]);
   const folders = snapshot?.folders ?? EMPTY_FOLDERS;
   const decks = snapshot?.decks ?? EMPTY_DECKS;
   const tree = useMemo(() => (snapshot ? buildTree(folders, decks) : EMPTY_TREE), [snapshot, folders, decks]);
