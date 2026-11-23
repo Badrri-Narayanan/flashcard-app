@@ -55,7 +55,7 @@ export class DexieRepository implements Repository {
     try {
       return await fn();
     } catch (err) {
-      if (isQuotaError(err)) throw new StorageFullError();
+      if (isQuotaError(err)) throw new StorageFullError(undefined, { cause: err });
       throw err;
     }
   }
@@ -283,6 +283,7 @@ export class DexieRepository implements Repository {
         .where('[deckId+due]')
         .between([deckId, Dexie.minKey], [deckId, until], true, true)
         .filter((i) => i.state !== 0 && isLive(i))
+        .limit(limit)
         .toArray();
       found.push(...items);
     }
@@ -296,6 +297,7 @@ export class DexieRepository implements Repository {
         .where('[deckId+due]')
         .between([deckId, Dexie.minKey], [deckId, SUSPENDED_DUE], true, false)
         .filter((i) => i.state === 0 && isLive(i))
+        .limit(limit)
         .toArray();
       found.push(...items);
     }

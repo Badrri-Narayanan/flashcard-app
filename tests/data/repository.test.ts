@@ -184,4 +184,57 @@ describe('DexieRepository', () => {
     vi.spyOn(db.cards, 'put').mockRejectedValue(new DOMException('', 'QuotaExceededError'));
     await expect(repo.saveCard(mkCard(deck.id))).rejects.toBeInstanceOf(StorageFullError);
   });
+
+  it('suspend sets due to MAX_SAFE_INTEGER and unsuspend restores due to now()', async () => {
+    const deck = mkDeck();
+    await repo.saveDeck(deck);
+    const card = mkCard(deck.id);
+    await repo.saveCard(card);
+    await repo.saveCard({ ...card, suspended: true });
+    const item = (await db.reviewItems.where('cardId').equals(card.id).first())!;
+    expect(item.due).toBe(Number.MAX_SAFE_INTEGER);
+    expect(await repo.countDue(deck.id, Number.MAX_SAFE_INTEGER - 1)).toEqual({ due: 0, new: 0 });
+    const before = Date.now();
+    await repo.saveCard({ ...card, suspended: false });
+    const after = (await db.reviewItems.get(item.id))!;
+    expect(after.due).toBeGreaterThanOrEqual(before);
+    expect(after.due).toBeLessThanOrEqual(Date.now());
+    expect((await repo.countDue(deck.id, Date.now())).new).toBe(1);
+  });
+
+  it('moving a card to another deck updates its items deckId', async () => {
+    const d1 = mkDeck();
+    const d2 = mkDeck();
+    await repo.saveDeck(d1);
+    await repo.saveDeck(d2);
+    const card = mkCard(d1.id, { type: 'reversible' });
+    await repo.saveCard(card);
+    await repo.saveCard({ ...card, deckId: d2.id });
+    const items = await db.reviewItems.where('cardId').equals(card.id).toArray();
+    expect(items).toHaveLength(2);
+    expect(items.every((i) => i.deckId === d2.id)).toBe(true);
+  });
+
+  it('wraps QuotaExceededError found on err.inner', async () => {
+    const deck = mkDeck();
+    await repo.saveDeck(deck);
+    const wrapped = Object.assign(new Error('wrapped'), { inner: new DOMException('', 'QuotaExceededError') });
+    vi.spyOn(db.cards, 'put').mockRejectedValue(wrapped);
+    const err = await repo.saveCard(mkCard(deck.id)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(StorageFullError);
+    expect((err as StorageFullError).cause).toBe(wrapped);
+  });
+
+  it('getDueItems and getNewItems apply limit across decks', async () => {
+    const d1 = mkDeck();
+    const d2 = mkDeck();
+    await repo.saveDeck(d1);
+    await repo.saveDeck(d2);
+    for (let n = 0; n < 3; n++) {
+      await repo.saveCard(mkCard(d1.id));
+      await repo.saveCard(mkCard(d2.id));
+    }
+    expect(await repo.getNewItems([d1.id, d2.id], 4)).toHaveLength(4);
+    expect(await repo.getNewItems([d1.id], 2)).toHaveLength(2);
+  });
 });

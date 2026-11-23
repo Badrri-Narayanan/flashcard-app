@@ -1,8 +1,11 @@
 import type { Card, Deck, Folder, Id, Media, ReviewItem, ReviewLog } from '../domain/types';
 
 export class StorageFullError extends Error {
-  constructor(message = 'Device storage is full') {
+  readonly cause?: unknown;
+
+  constructor(message = 'Device storage is full', options?: { cause?: unknown }) {
     super(message);
+    this.cause = options?.cause;
     this.name = 'StorageFullError';
   }
 }
@@ -15,6 +18,7 @@ export interface Repository {
   moveFolder(id: Id, parentId: Id | null): Promise<void>;
 
   listDecks(): Promise<Deck[]>;
+  /** Returns soft-deleted rows too, so Undo can find them. */
   getDeck(id: Id): Promise<Deck | undefined>;
   saveDeck(d: Deck): Promise<void>;
   deleteDeck(id: Id): Promise<void>;
@@ -23,6 +27,7 @@ export interface Repository {
   moveDeck(id: Id, folderId: Id | null): Promise<void>;
 
   listCards(deckId: Id): Promise<Card[]>;
+  /** Returns soft-deleted rows too, so Undo can find them. */
   getCard(id: Id): Promise<Card | undefined>;
   saveCard(card: Card): Promise<void>;
   saveCards(cards: Card[]): Promise<void>;
