@@ -69,7 +69,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 export default function AppShell() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 md:flex dark:bg-slate-950 dark:text-slate-100">
-      <main className="min-w-0 flex-1 pb-24 md:pb-8">
+      <main tabIndex={-1} className="min-w-0 flex-1 pb-24 outline-none md:pb-8">
         <Outlet />
       </main>
       <nav

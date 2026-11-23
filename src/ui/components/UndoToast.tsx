@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { strings } from '../strings';
 import { UNDO_TOAST_MS } from './toastTiming';
 
@@ -10,10 +10,14 @@ interface Props {
 }
 
 export default function UndoToast({ message, onUndo, onClose, durationMs = UNDO_TOAST_MS }: Props) {
+  const closeRef = useRef(onClose);
   useEffect(() => {
-    const t = setTimeout(onClose, durationMs);
+    closeRef.current = onClose;
+  });
+  useEffect(() => {
+    const t = setTimeout(() => closeRef.current(), durationMs);
     return () => clearTimeout(t);
-  }, [onClose, durationMs]);
+  }, [durationMs]);
 
   return (
     <div className="pointer-events-auto flex items-center justify-between gap-3 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-slate-100 dark:text-slate-900">

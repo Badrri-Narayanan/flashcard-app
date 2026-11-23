@@ -10,16 +10,24 @@ interface Props {
 /** Modal built on native <dialog>: focus is trapped and Esc closes it. */
 export default function Dialog({ title, onClose, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
+  const opener = useRef<HTMLElement | null | undefined>(undefined);
   const titleId = useId();
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || el.open) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (typeof el.showModal === 'function') el.showModal();
-    else el.setAttribute('open', '');
+    if (!el) return;
+    // Captured once so StrictMode's second effect run doesn't overwrite it with focus inside the dialog.
+    if (opener.current === undefined) {
+      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+    if (!el.open) {
+      if (typeof el.showModal === 'function') el.showModal();
+      else el.setAttribute('open', '');
+    }
     return () => {
-      if (opener?.isConnected) opener.focus();
+      const target = opener.current;
+      if (target?.isConnected) target.focus();
+      else document.querySelector<HTMLElement>('main')?.focus();
     };
   }, []);
 

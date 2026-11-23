@@ -1,13 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/data/db';
 import { repo } from '../../src/data/repo';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
 import type { Card, Deck, Folder } from '../../src/domain/types';
 import { routes } from '../../src/ui/routes';
+import ToastRegion from '../../src/ui/components/ToastRegion';
 
 afterEach(cleanup);
 
@@ -221,5 +222,50 @@ describe('library', () => {
     await user.keyboard('{Escape}');
     expect(trigger).toHaveFocus();
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+  });
+
+  it('closing a dialog returns focus to the menu trigger', async () => {
+    const user = userEvent.setup();
+    await repo.saveDeck(mkDeck({ name: 'Biology' }));
+    renderAt('/');
+    const trigger = await screen.findByRole('button', { name: 'More actions for Biology' });
+    await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it('shows an alert in the dialog when saving fails', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(repo, 'saveDeck').mockRejectedValue(new Error('boom'));
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: 'New deck' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Name'), 'X');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Could not save');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
+});
+
+describe('ToastRegion', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('re-rendering does not reset the auto-dismiss timer', () => {
+    vi.useFakeTimers();
+    const first = vi.fn();
+    const second = vi.fn();
+    const toast = { id: 1, message: 'Hi', durationMs: 1000 };
+    const { rerender } = render(<ToastRegion toasts={[toast]} onClose={first} />);
+    vi.advanceTimersByTime(600);
+    rerender(<ToastRegion toasts={[toast]} onClose={second} />);
+    vi.advanceTimersByTime(399);
+    expect(second).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(2);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
   });
 });
