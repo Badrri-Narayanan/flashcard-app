@@ -6,3 +6,5 @@ import '@fontsource/merriweather/400.css';
 import '@fontsource/merriweather/700.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/fira-code/400.css';
+import '@fontsource/opendyslexic/400.css';
+import '@fontsource/opendyslexic/700.css';

@@ -1,11 +1,14 @@
-import { render, screen, act } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { db } from '../../src/data/db';
 import { repo } from '../../src/data/repo';
 import { applySettings } from '../../src/ui/settings/applySettings';
 import { DEFAULT_SETTINGS, useSettings } from '../../src/ui/settings/settings';
 import { SettingsProvider } from '../../src/ui/settings/SettingsProvider';
+
+afterEach(cleanup);
 
 beforeEach(async () => {
   await db.delete();
@@ -73,10 +76,9 @@ describe('useSettings', () => {
     await user.click(screen.getByRole('button'));
     expect(screen.getByRole('button')).toHaveTextContent('goal:55');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    await act(async () => {
-      await Promise.resolve();
+    await waitFor(async () => {
+      expect(((await repo.getKV('settings')) as { dailyGoal: number }).dailyGoal).toBe(55);
     });
-    expect(((await repo.getKV('settings')) as { dailyGoal: number }).dailyGoal).toBe(55);
     first.unmount();
 
     render(
@@ -86,4 +88,25 @@ describe('useSettings', () => {
     );
     expect(await screen.findByText('goal:55')).toBeInTheDocument();
   });
+
+  it('a patch before load finishes keeps stored values', async () => {
+    await repo.setKV('settings', { theme: 'dark' });
+    render(
+      <SettingsProvider>
+        <Probe30 />
+      </SettingsProvider>,
+    );
+    await waitFor(async () => {
+      expect(await repo.getKV('settings')).toMatchObject({ theme: 'dark', dailyGoal: 30 });
+    });
+    expect(screen.getByRole('button')).toHaveTextContent('goal:30');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
 });
+
+function Probe30() {
+  const [s, update] = useSettings();
+  // Runs on mount, i.e. synchronously before the async kv load resolves.
+  useEffect(() => update({ dailyGoal: 30 }), [update]);
+  return <button>goal:{s.dailyGoal}</button>;
+}

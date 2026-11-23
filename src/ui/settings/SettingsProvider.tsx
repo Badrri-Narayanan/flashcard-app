@@ -12,20 +12,35 @@ function darkMedia(): MediaQueryList | null {
     : null;
 }
 
+function save(s: AppSettings) {
+  repo.setKV(KV_KEY, s).catch((err: unknown) => console.error('Failed to save settings', err));
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const latest = useRef<AppSettings>(DEFAULT_SETTINGS);
-  const touched = useRef(false);
+  // Keys patched before the stored value finished loading; they win over stored values.
+  const pending = useRef<Partial<AppSettings>>({});
+  const loaded = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    void repo.getKV<Partial<AppSettings>>(KV_KEY).then((stored) => {
-      // A patch made before load finished wins; just fill in stored values underneath.
-      if (cancelled || !stored) return;
-      const merged = { ...DEFAULT_SETTINGS, ...stored, ...(touched.current ? latest.current : {}) };
-      latest.current = merged;
-      setSettings(merged);
-    });
+    repo
+      .getKV<Partial<AppSettings>>(KV_KEY)
+      .catch((err: unknown) => {
+        console.error('Failed to load settings', err);
+        return undefined;
+      })
+      .then((stored) => {
+        if (cancelled) return;
+        loaded.current = true;
+        const hasPending = Object.keys(pending.current).length > 0;
+        const merged = { ...DEFAULT_SETTINGS, ...stored, ...pending.current };
+        pending.current = {};
+        latest.current = merged;
+        setSettings(merged);
+        if (hasPending) save(merged);
+      });
     return () => {
       cancelled = true;
     };
@@ -35,16 +50,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const media = darkMedia();
     const apply = () => applySettings(settings, document.documentElement, media?.matches ?? false);
     apply();
-    media?.addEventListener('change', apply);
-    return () => media?.removeEventListener('change', apply);
+    if (!media) return;
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', apply);
+      return () => media.removeEventListener('change', apply);
+    }
+    media.addListener(apply);
+    return () => media.removeListener(apply);
   }, [settings]);
 
   const update = useCallback((patch: Partial<AppSettings>) => {
-    touched.current = true;
     const next = { ...latest.current, ...patch };
     latest.current = next;
     setSettings(next);
-    void repo.setKV(KV_KEY, next);
+    if (loaded.current) save(next);
+    else pending.current = { ...pending.current, ...patch };
   }, []);
 
   const value = useMemo(() => [settings, update] as [AppSettings, typeof update], [settings, update]);
