@@ -373,13 +373,16 @@ export class DexieRepository implements Repository {
   async getExistingMeta(): Promise<ExistingMeta> {
     const ids = new Set<Id>();
     const updatedAt = new Map<Id, number>();
+    const placement = new Map<Id, Id | null>();
     for (const table of [this.db.folders, this.db.decks, this.db.cards, this.db.reviewItems, this.db.reviewLogs, this.db.media]) {
       await table.each((r) => {
         ids.add(r.id);
         updatedAt.set(r.id, r.updatedAt);
       });
     }
-    return { ids, updatedAt };
+    await this.db.folders.each((f) => placement.set(f.id, f.parentId));
+    await this.db.decks.each((d) => placement.set(d.id, d.folderId));
+    return { ids, updatedAt, placement };
   }
 
   importRecords(put: Partial<ImportRecords>): Promise<void> {

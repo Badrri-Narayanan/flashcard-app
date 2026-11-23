@@ -69,6 +69,8 @@ export type MergeMode = 'update' | 'copy';
 export interface ExistingMeta {
   ids: Set<Id>;
   updatedAt: Map<Id, number>;
+  /** Local parentId (folders) / folderId (decks), so updates never move a record. */
+  placement?: Map<Id, Id | null>;
 }
 
 export interface MergePlan {
@@ -167,14 +169,19 @@ export function planImport(file: BackupFile, existing: ExistingMeta, mode: Merge
 
   const summary = { added: 0, updated: 0, skipped: 0 };
   const folderIds = new Set(file.folders.map((f) => f.id));
-  const pick = <T extends { id: Id; updatedAt: number }>(records: T[], adjust: (r: T) => T = (r) => r): T[] => {
+  const pick = <T extends { id: Id; updatedAt: number }>(
+    records: T[],
+    adjust: (r: T) => T = (r) => r,
+    keepPlacement: (r: T, local: Id | null) => T = (r) => r,
+  ): T[] => {
     const out: T[] = [];
     for (const r of records) {
       if (!existing.ids.has(r.id)) {
         out.push(adjust(r));
         summary.added++;
       } else if (r.updatedAt > (existing.updatedAt.get(r.id) ?? 0)) {
-        out.push(r);
+        const local = existing.placement?.get(r.id);
+        out.push(local === undefined ? r : keepPlacement(r, local));
         summary.updated++;
       } else {
         summary.skipped++;
@@ -188,8 +195,16 @@ export function planImport(file: BackupFile, existing: ExistingMeta, mode: Merge
     return parentId !== null && existing.ids.has(parentId) ? parentId : null;
   };
 
-  const folders = pick(file.folders, (f) => ({ ...f, parentId: rootParent(f.parentId) }));
-  const decks = pick(file.decks, (d) => ({ ...d, folderId: rootParent(d.folderId) }));
+  const folders = pick(
+    file.folders,
+    (f) => ({ ...f, parentId: rootParent(f.parentId) }),
+    (f, parentId) => ({ ...f, parentId }),
+  );
+  const decks = pick(
+    file.decks,
+    (d) => ({ ...d, folderId: rootParent(d.folderId) }),
+    (d, folderId) => ({ ...d, folderId }),
+  );
   const cards = pick(file.cards);
   const fresh = <T extends { id: Id }>(records: T[] | undefined) => (records ?? []).filter((r) => !existing.ids.has(r.id));
   const media = file.media.filter((m) => !existing.ids.has(m.id)).map((m) => toMedia(m, m.id));

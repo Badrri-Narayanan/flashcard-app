@@ -125,6 +125,20 @@ describe('backupIO', () => {
     expect((await db.cards.get(s.c.id))!.front).toBe('local edit');
   });
 
+  it('update mode applies newer fields but keeps locally moved folders and decks in place', async () => {
+    const s = await seed();
+    const blob = await exportBackup('library', null, { includeHistory: true });
+    const elsewhere = folder();
+    await repo.saveFolder(elsewhere);
+    // Local copy is older but was moved; the file copy (exported earlier) must lose on placement only.
+    await db.decks.put({ ...s.d, folderId: elsewhere.id, updatedAt: s.d.updatedAt - 10, name: 'old name' });
+    await db.folders.put({ ...s.f, parentId: elsewhere.id, updatedAt: s.f.updatedAt - 10, name: 'old' });
+    const file = await readBackupFile(asFile(await text(blob)));
+    await applyImport(planImport(file, await existingMeta(), 'update', null));
+    expect(await db.decks.get(s.d.id)).toMatchObject({ name: s.d.name, folderId: elsewhere.id });
+    expect(await db.folders.get(s.f.id)).toMatchObject({ name: s.f.name, parentId: elsewhere.id });
+  });
+
   it('update mode never overwrites local review items', async () => {
     const s = await seed();
     const blob = await exportBackup('library', null, { includeHistory: true });

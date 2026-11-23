@@ -95,6 +95,24 @@ describe('planImport update mode', () => {
     expect(plan.put.reviewItems).toEqual([]);
   });
 
+  it('updates a newer folder or deck but keeps its local placement', () => {
+    const f = folder({ name: 'new', parentId: 'file-parent', updatedAt: 200 });
+    const d = deck({ name: 'newer', folderId: 'file-folder', updatedAt: 200 });
+    const plan = planImport(
+      file({ folders: [f], decks: [d] }),
+      {
+        ids: new Set([f.id, d.id]),
+        updatedAt: new Map([[f.id, 100], [d.id, 100]]),
+        placement: new Map<string, string | null>([[f.id, 'local-parent'], [d.id, null]]),
+      },
+      'update',
+      'target',
+    );
+    expect(plan.put.folders[0]).toMatchObject({ name: 'new', parentId: 'local-parent' });
+    expect(plan.put.decks[0]).toMatchObject({ name: 'newer', folderId: null });
+    expect(plan.summary.updated).toBe(2);
+  });
+
   it('puts only newly added file roots under the target folder', () => {
     const f = folder();
     const inner = deck({ folderId: f.id });
