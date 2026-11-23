@@ -3,6 +3,7 @@ import type { Card } from './types';
 
 const MAX_OPTIONS = 4;
 const MIN_QUIZ_CARDS = 4;
+export const MIN_MATCH_CARDS = 3;
 const LENGTH_TOLERANCE = 0.5;
 
 export interface QuizPrompt {
@@ -23,9 +24,14 @@ export function canQuiz(cards: Card[]): boolean {
   return cards.filter((c) => !c.suspended).length >= MIN_QUIZ_CARDS;
 }
 
+export function canMatch(cards: Card[]): boolean {
+  return cards.filter((c) => !c.suspended).length >= MIN_MATCH_CARDS;
+}
+
 const normalize = (text: string) => text.trim().toLowerCase().replace(/\s+/g, ' ');
 
-function shuffled<T>(items: readonly T[], rng: () => number): T[] {
+/** Fisher-Yates shuffle of a copy, driven by the given random source. */
+export function shuffled<T>(items: readonly T[], rng: () => number): T[] {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));

@@ -6,6 +6,7 @@ import ToastRegion from '../components/ToastRegion';
 import { strings } from '../strings';
 import KeyboardHelp from './KeyboardHelp';
 import SessionSummary from './SessionSummary';
+import StudyNotice from './StudyNotice';
 import StudyTopBar from './StudyTopBar';
 import { useKeyHints } from './useKeyHints';
 import { useQuizSession } from './useQuizSession';
@@ -15,19 +16,6 @@ interface Props {
   deckIds: Id[];
   backTo: string;
   learnHref: string;
-}
-
-const outline = 'inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-5 font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800';
-
-function Notice({ text, backTo }: { text: string; backTo: string }) {
-  return (
-    <section className="mx-auto max-w-md space-y-4 px-4 py-12 text-center">
-      <p>{text}</p>
-      <Link to={backTo} className={outline}>
-        {strings.study.back}
-      </Link>
-    </section>
-  );
 }
 
 export default function QuizMode({ deckIds, backTo, learnHref }: Props) {
@@ -56,8 +44,8 @@ export default function QuizMode({ deckIds, backTo, learnHref }: Props) {
   );
 
   if (s.loading) return <p className="p-8 text-center">{strings.common.loading}</p>;
-  if (!s.available) return <Notice text={q.needMoreCards} backTo={backTo} />;
-  if (s.questions.length === 0) return <Notice text={q.empty} backTo={backTo} />;
+  if (!s.available) return <StudyNotice text={q.needMoreCards} backTo={backTo} />;
+  if (s.questions.length === 0) return <StudyNotice text={q.empty} backTo={backTo} />;
 
   if (s.finished) {
     const total = s.results.length;

@@ -7,6 +7,10 @@ function matches(query: string): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
 }
 
+export function isWideViewport(): boolean {
+  return matches(WIDE);
+}
+
 /** Keyboard hints show only when enabled in settings and the viewport is at least 768px wide. */
 export function useKeyHints(): boolean {
   const [{ showKeyboardHints }] = useSettings();

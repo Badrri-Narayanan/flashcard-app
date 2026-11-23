@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { repo } from '../../data/repo';
 import { dayKey } from '../../domain/day';
-import { canQuiz, pickOptions, quizPrompt } from '../../domain/distractors';
+import { canQuiz, pickOptions, quizPrompt, shuffled } from '../../domain/distractors';
 import { baseRecord } from '../../domain/ids';
 import { mulberry32 } from '../../domain/queue';
 import type { Card, Deck, Id, ReviewLog } from '../../domain/types';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
+import { loadScopeCards } from './loadScopeCards';
 
 export const QUIZ_LENGTH = 10;
 
@@ -44,11 +45,7 @@ export interface QuizSession {
 }
 
 function buildQuestions(cards: Card[], decks: Map<Id, Deck>, rng: () => number): QuizQuestion[] {
-  const order = [...cards];
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
+  const order = shuffled(cards, rng);
   const out: QuizQuestion[] = [];
   for (const card of order) {
     if (out.length >= QUIZ_LENGTH) break;
@@ -86,16 +83,11 @@ export function useQuizSession(deckIds: Id[]): QuizSession {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const ids = deckKey ? deckKey.split(',') : [];
-      const decks = (await Promise.all(ids.map((id) => repo.getDeck(id)))).filter(
-        (d): d is Deck => !!d && d.deletedAt === null,
-      );
-      const lists = await Promise.all(decks.map((d) => repo.listCards(d.id)));
-      const cards = lists.flat().filter((c) => !c.suspended);
+      const { decks, cards } = await loadScopeCards(deckKey);
       if (cancelled) return;
       shownAt.current = Date.now();
       const available = canQuiz(cards);
-      const questions = available ? buildQuestions(cards, new Map(decks.map((d) => [d.id, d])), mulberry32(Date.now())) : [];
+      const questions = available ? buildQuestions(cards, decks, mulberry32(Date.now())) : [];
       setLoaded({ available, questions });
     })().catch((err: unknown) => {
       console.error('Failed to load quiz session', err);

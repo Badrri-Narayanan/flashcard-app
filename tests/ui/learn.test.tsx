@@ -466,7 +466,8 @@ describe('study home', () => {
     const { deck } = await seed(2);
     renderAt('/study');
     expect(await screen.findByText(/2 new/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Study Spanish' })).toHaveAttribute('href', `/study/deck/${deck.id}/learn`);
+    const modes = screen.getByRole('navigation', { name: 'Study modes for Spanish' });
+    expect(within(modes).getByRole('link', { name: 'Learn' })).toHaveAttribute('href', `/study/deck/${deck.id}/learn`);
     expect(screen.getByRole('link', { name: 'Study everything due' })).toHaveAttribute('href', '/study/folder/all/learn');
   });
 
@@ -484,9 +485,9 @@ describe('study home', () => {
     expect(await screen.findByText(/No decks yet/)).toBeInTheDocument();
   });
 
-  it('other modes render the coming soon note', async () => {
+  it('unknown modes render the coming soon note', async () => {
     const { deck } = await seed(1);
-    renderAt(`/study/deck/${deck.id}/match`);
+    renderAt(`/study/deck/${deck.id}/nope`);
     expect(await screen.findByRole('heading', { name: 'Coming soon' })).toBeInTheDocument();
   });
 

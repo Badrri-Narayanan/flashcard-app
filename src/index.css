@@ -96,3 +96,20 @@ samp {
 .dark .hljs-deletion {
   color: #fca5a5;
 }
+
+@keyframes tile-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
+.tile-shake {
+  animation: tile-shake 0.4s ease-in-out;
+}

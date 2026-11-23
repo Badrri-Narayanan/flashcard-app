@@ -2,32 +2,21 @@ import Dialog from '../components/Dialog';
 import { strings } from '../strings';
 
 interface Props {
-  mode: 'learn' | 'cram' | 'quiz';
+  mode: 'learn' | 'cram' | 'quiz' | 'type' | 'match';
   onClose(): void;
 }
 
 export default function KeyboardHelp({ mode, onClose }: Props) {
   const k = strings.study.keys;
-  const rows =
-    mode === 'learn'
-      ? [
-          ['Space', k.flip],
-          ['1 2 3 4', k.rate],
-          ['Z', k.undo],
-          ['?', k.help],
-        ]
-      : mode === 'quiz'
-        ? [
-            ['1 2 3 4', k.quizPick],
-            ['Enter / Space', k.quizNext],
-            ['?', k.help],
-          ]
-        : [
-          ['Space', k.flip],
-          ['1 / 3', k.cramMark],
-          ['← →', k.cramNav],
-          ['?', k.help],
-        ];
+  const help = ['?', k.help];
+  const rowsByMode: Record<Props['mode'], string[][]> = {
+    learn: [['Space', k.flip], ['1 2 3 4', k.rate], ['Z', k.undo], help],
+    cram: [['Space', k.flip], ['1 / 3', k.cramMark], ['← →', k.cramNav], help],
+    quiz: [['1 2 3 4', k.quizPick], ['Enter / Space', k.quizNext], help],
+    type: [['Enter', k.typeCheck], ['R', k.typeOverride], help],
+    match: [['Tab', k.matchMove], ['Enter / Space', k.matchSelect], help],
+  };
+  const rows = rowsByMode[mode];
   return (
     <Dialog title={k.title} onClose={onClose}>
       <dl className="space-y-2">
