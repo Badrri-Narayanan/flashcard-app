@@ -13,12 +13,14 @@ interface Props {
   onAction: (action: RowAction, node: TreeNode) => void;
   /** Called when a row is dropped on a folder (id) or the root area (null). */
   onDropMove: (target: MoveTarget, parentId: Id | null) => void;
+  /** Folder that empty-area drops go to: the scoped folder, or null at the top level. */
+  rootId: Id | null;
 }
 
 function Badges({ counts }: { counts?: { due: number; new: number } }) {
   if (!counts) return null;
   return (
-    <span className="flex shrink-0 gap-1 text-xs font-medium">
+    <span className="flex flex-wrap gap-1 text-xs font-medium">
       {counts.due > 0 && (
         <span aria-label={strings.library.dueLabel(counts.due)} className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
           {strings.library.due(counts.due)}
@@ -33,7 +35,7 @@ function Badges({ counts }: { counts?: { due: number; new: number } }) {
   );
 }
 
-export default function TreeView({ nodes, dueCounts, onAction, onDropMove }: Props) {
+export default function TreeView({ nodes, dueCounts, onAction, onDropMove, rootId }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Id>>(new Set());
   const [hoverId, setHoverId] = useState<Id | 'root' | null>(null);
   const dragged = useRef<MoveTarget | null>(null);
@@ -69,12 +71,19 @@ export default function TreeView({ nodes, dueCounts, onAction, onDropMove }: Pro
           onDragLeave: () => setHoverId((h) => (h === node.id ? null : h)),
           onDrop: (e: DragEvent) => dropOn(e, node.id),
         }
-      : {};
+      : {
+          // Decks are not drop targets; swallow events so they don't fall through to the root area.
+          onDragOver: (e: DragEvent) => e.stopPropagation(),
+          onDrop: (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setHoverId(null);
+            dragged.current = null;
+          },
+        };
     return (
       <li
         key={node.id}
-        role="treeitem"
-        aria-expanded={isFolder ? isOpen : undefined}
         data-node-id={node.id}
         draggable
         onDragStart={(e) => {
@@ -99,6 +108,7 @@ export default function TreeView({ nodes, dueCounts, onAction, onDropMove }: Pro
             <button
               type="button"
               aria-label={isOpen ? strings.library.collapse(node.name) : strings.library.expand(node.name)}
+              aria-expanded={isOpen}
               onClick={() => toggle(node.id)}
               className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
             >
@@ -112,13 +122,15 @@ export default function TreeView({ nodes, dueCounts, onAction, onDropMove }: Pro
             className="flex min-h-14 min-w-0 flex-1 items-center gap-3 py-2"
           >
             <span aria-hidden className="text-2xl">{node.emoji}</span>
-            <span className="truncate font-medium">{node.name}</span>
-            <Badges counts={dueCounts[node.id]} />
+            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="truncate font-medium">{node.name}</span>
+              <Badges counts={dueCounts[node.id]} />
+            </span>
           </Link>
           <RowMenu node={node} onAction={onAction} />
         </div>
         {isFolder && isOpen && node.children.length > 0 && (
-          <ul role="group" className="ms-6 mt-2 space-y-2">
+          <ul className="ms-6 mt-2 space-y-2">
             {node.children.map(renderNode)}
           </ul>
         )}
@@ -134,10 +146,10 @@ export default function TreeView({ nodes, dueCounts, onAction, onDropMove }: Pro
         setHoverId('root');
       }}
       onDragLeave={() => setHoverId((h) => (h === 'root' ? null : h))}
-      onDrop={(e) => dropOn(e, null)}
+      onDrop={(e) => dropOn(e, rootId)}
       className={`space-y-2 rounded-xl p-1 ${hoverId === 'root' ? 'ring-2 ring-accent-500' : ''}`}
     >
-      <ul role="tree" aria-label={strings.library.treeLabel} className="space-y-2">
+      <ul aria-label={strings.library.treeLabel} className="space-y-2">
         {nodes.map(renderNode)}
       </ul>
     </div>

@@ -28,6 +28,7 @@ export default function EntityDialog({ title, initial, defaultEmoji, onSubmit, o
   const [emoji, setEmoji] = useState(initial.emoji ?? defaultEmoji);
   const [color, setColor] = useState(initial.color || DEFAULT_COLOR);
   const [error, setError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
   const errorId = useId();
 
@@ -38,12 +39,14 @@ export default function EntityDialog({ title, initial, defaultEmoji, onSubmit, o
       return;
     }
     setSaving(true);
+    setSaveError(false);
     try {
       await onSubmit({ name: name.trim(), description: description.trim(), emoji: emoji.trim() || defaultEmoji, color });
       onClose();
     } catch (err) {
       console.error('Failed to save', err);
       setSaving(false);
+      setSaveError(true);
     }
   }
 
@@ -94,6 +97,11 @@ export default function EntityDialog({ title, initial, defaultEmoji, onSubmit, o
             ))}
           </div>
         </div>
+        {saveError && (
+          <p role="alert" className="text-sm text-rose-600">
+            {strings.dialog.saveFailed}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="min-h-11 rounded-lg px-4 font-medium hover:bg-slate-100 dark:hover:bg-slate-800">
             {strings.common.cancel}

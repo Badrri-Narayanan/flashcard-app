@@ -11,22 +11,29 @@ interface Props {
 
 const itemClass = 'block min-h-11 w-full px-4 text-start hover:bg-slate-100 dark:hover:bg-slate-800';
 
+/** Disclosure popover of buttons: focus moves in on open, Esc returns it to the trigger. */
 export default function RowMenu({ node, onAction }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
+    panelRef.current?.querySelector<HTMLElement>('button')?.focus();
+    const onDown = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
-    document.addEventListener('mousedown', onDown);
+    document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('pointerdown', onDown);
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
@@ -41,8 +48,8 @@ export default function RowMenu({ node, onAction }: Props) {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         type="button"
-        aria-haspopup="menu"
         aria-expanded={open}
         aria-label={strings.library.moreActions(node.name)}
         onClick={() => setOpen((o) => !o)}
@@ -52,16 +59,16 @@ export default function RowMenu({ node, onAction }: Props) {
       </button>
       {open && (
         <div
-          role="menu"
+          ref={panelRef}
           className="absolute end-0 z-20 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
         >
           {items.map(({ action, label }) => (
             <button
               key={action}
               type="button"
-              role="menuitem"
               onClick={() => {
                 setOpen(false);
+                triggerRef.current?.focus();
                 onAction(action, node);
               }}
               className={`${itemClass} ${action === 'delete' ? 'text-rose-600' : ''}`}

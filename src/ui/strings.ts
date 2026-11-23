@@ -37,7 +37,7 @@ export const strings = {
     collapse: (name: string) => `Collapse ${name}`,
     moreActions: (name: string) => `More actions for ${name}`,
     deleted: (name: string) => `Deleted “${name}”`,
-    moved: (name: string) => `Moved “${name}”`,
+    actionFailed: 'Something went wrong. Please try again.',
     cantMoveIntoSelf: "Can't move a folder into itself or one of its sub-folders",
   },
   menu: {
@@ -54,6 +54,7 @@ export const strings = {
     editDeck: 'Edit deck',
     name: 'Name',
     nameRequired: 'Please enter a name.',
+    saveFailed: 'Could not save. Please try again.',
     description: 'Description',
     emoji: 'Emoji',
     color: 'Color',

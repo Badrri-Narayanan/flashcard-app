@@ -15,8 +15,12 @@ export default function Dialog({ title, onClose, children }: Props) {
   useEffect(() => {
     const el = ref.current;
     if (!el || el.open) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (typeof el.showModal === 'function') el.showModal();
     else el.setAttribute('open', '');
+    return () => {
+      if (opener?.isConnected) opener.focus();
+    };
   }, []);
 
   return (

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { type TreeNode } from '../../domain/tree';
 import type { Deck, Folder, Id } from '../../domain/types';
-import UndoToast from '../components/UndoToast';
+import ToastRegion from '../components/ToastRegion';
 import { useLibrary } from '../hooks/useLibrary';
 import { useLibraryActions, type MoveTarget } from '../hooks/useLibraryActions';
 import { strings } from '../strings';
@@ -122,7 +122,7 @@ export default function LibraryPage() {
       {!ready && <p className="text-slate-600 dark:text-slate-400">{strings.common.loading}</p>}
       {showOnboarding && <OnboardingEmpty onCreateDeck={() => setDialog({ type: 'deck' })} />}
       {ready && !showOnboarding && nodes.length === 0 && <p className="py-8 text-center text-slate-600 dark:text-slate-400">{strings.library.emptyFolder}</p>}
-      {nodes.length > 0 && <TreeView nodes={nodes} dueCounts={dueCounts} onAction={onAction} onDropMove={dropMove} />}
+      {nodes.length > 0 && <TreeView nodes={nodes} dueCounts={dueCounts} onAction={onAction} onDropMove={dropMove} rootId={parentId} />}
 
       {dialog?.type === 'folder' && <FolderDialog folder={dialog.folder} parentId={parentId} onClose={closeDialog} />}
       {dialog?.type === 'deck' && <DeckDialog deck={dialog.deck} folderId={parentId} onClose={closeDialog} />}
@@ -135,7 +135,7 @@ export default function LibraryPage() {
           onClose={closeDialog}
         />
       )}
-      {actions.toast && <UndoToast message={actions.toast.message} onUndo={actions.toast.onUndo} onClose={actions.dismissToast} />}
+      <ToastRegion toasts={actions.toasts} onClose={actions.dismissToast} />
     </div>
   );
 }

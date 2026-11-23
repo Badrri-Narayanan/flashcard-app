@@ -31,6 +31,7 @@ export default function OnboardingEmpty({ onCreateDeck }: Props) {
         <button type="button" disabled aria-labelledby="ob-sample" aria-describedby="ob-sample-hint" title={o.comingSoon} className={`${card} cursor-not-allowed opacity-60`}>
           <span id="ob-sample" className="font-semibold">{o.sample}</span>
           <span id="ob-sample-hint" className={hint}>{o.sampleHint}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{o.comingSoon}</span>
         </button>
       </div>
     </section>

@@ -45,6 +45,18 @@ async function fillAndSave(user: ReturnType<typeof userEvent.setup>, name: strin
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 }
 
+function dnd() {
+  const data: Record<string, string> = {};
+  const dataTransfer = {
+    setData: (k: string, v: string) => { data[k] = v; },
+    getData: (k: string) => data[k] ?? '',
+    effectAllowed: '',
+    dropEffect: '',
+  };
+  const row = (id: string) => document.querySelector<HTMLElement>(`[data-node-id="${id}"]`)!;
+  return { dataTransfer, row };
+}
+
 describe('library', () => {
   it('create folder then deck inside it appears nested', async () => {
     const user = userEvent.setup();
@@ -62,9 +74,9 @@ describe('library', () => {
     expect((await repo.listDecks())[0].folderId).toBe(folder.id);
 
     await user.click(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Library' }));
-    const tree = await screen.findByRole('tree');
-    const folderItem = within(tree).getByRole('treeitem', { name: /Languages/ });
-    expect(within(folderItem).getByRole('link', { name: /Spanish/ })).toBeInTheDocument();
+    const folderItem = await screen.findByRole('link', { name: /Languages/ });
+    const li = folderItem.closest('li')!;
+    expect(within(li).getByRole('link', { name: /Spanish/ })).toBeInTheDocument();
   });
 
   it('delete deck then Undo restores it', async () => {
@@ -72,7 +84,7 @@ describe('library', () => {
     await repo.saveDeck(mkDeck({ name: 'Biology' }));
     renderAt('/');
     await user.click(await screen.findByRole('button', { name: 'More actions for Biology' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(screen.queryByRole('link', { name: /Biology/ })).not.toBeInTheDocument());
     expect(await repo.listDecks()).toHaveLength(0);
@@ -101,7 +113,7 @@ describe('library', () => {
     renderAt('/');
 
     await user.click(await screen.findByRole('button', { name: 'More actions for Parent' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move to…' }));
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
     const picker = await screen.findByRole('dialog');
     expect(within(picker).getByRole('button', { name: /Child/ })).toBeDisabled();
     expect(within(picker).getByRole('button', { name: /Parent/ })).toBeDisabled();
@@ -115,19 +127,11 @@ describe('library', () => {
     await repo.saveFolder(child);
     renderAt('/');
 
-    const rows = await screen.findAllByRole('treeitem');
-    const parentRow = rows.find((r) => r.getAttribute('data-node-id') === parent.id)!;
-    const childRow = rows.find((r) => r.getAttribute('data-node-id') === child.id)!;
-    const data: Record<string, string> = {};
-    const dataTransfer = {
-      setData: (k: string, v: string) => { data[k] = v; },
-      getData: (k: string) => data[k] ?? '',
-      effectAllowed: '',
-      dropEffect: '',
-    };
-    fireEvent.dragStart(within(parentRow).getAllByRole('link')[0], { dataTransfer });
-    fireEvent.dragOver(childRow, { dataTransfer });
-    fireEvent.drop(childRow, { dataTransfer });
+    await screen.findByRole('link', { name: /Child/ });
+    const { dataTransfer, row } = dnd();
+    fireEvent.dragStart(within(row(parent.id)).getAllByRole('link')[0], { dataTransfer });
+    fireEvent.dragOver(row(child.id), { dataTransfer });
+    fireEvent.drop(row(child.id), { dataTransfer });
 
     expect(await screen.findByRole('status')).toHaveTextContent("Can't move a folder into itself");
     expect((await repo.listFolders()).find((f) => f.id === parent.id)!.parentId).toBeNull();
@@ -141,7 +145,7 @@ describe('library', () => {
     await repo.saveDeck(deck);
     renderAt('/');
     await user.click(await screen.findByRole('button', { name: 'More actions for Biology' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move to…' }));
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: /Science/ }));
     await waitFor(async () => expect((await repo.listDecks())[0].folderId).toBe(folder.id));
   });
@@ -157,5 +161,65 @@ describe('library', () => {
     await user.keyboard('mito');
     const link = await screen.findByRole('link', { name: /Mitochondria/ });
     expect(link).toHaveAttribute('href', `/deck/${deck.id}/edit/${card.id}`);
+  });
+
+  it('dropping a deck onto a folder moves it there', async () => {
+    const folder = mkFolder({ name: 'Science' });
+    const deck = mkDeck({ name: 'Biology' });
+    await repo.saveFolder(folder);
+    await repo.saveDeck(deck);
+    renderAt('/');
+    await screen.findByRole('link', { name: /Biology/ });
+    const { dataTransfer, row } = dnd();
+    fireEvent.dragStart(row(deck.id), { dataTransfer });
+    fireEvent.dragOver(row(folder.id), { dataTransfer });
+    fireEvent.drop(row(folder.id), { dataTransfer });
+    await waitFor(async () => expect((await repo.listDecks())[0].folderId).toBe(folder.id));
+  });
+
+  it('in a folder view, dropping on a sibling deck or empty area keeps the item in that folder', async () => {
+    const folder = mkFolder({ name: 'Science' });
+    const a = mkDeck({ name: 'Alpha', folderId: folder.id });
+    const b = mkDeck({ name: 'Beta', folderId: folder.id });
+    await repo.saveFolder(folder);
+    await repo.saveDeck(a);
+    await repo.saveDeck(b);
+    renderAt(`/folder/${folder.id}`);
+    await screen.findByRole('link', { name: /Beta/ });
+    const { dataTransfer, row } = dnd();
+
+    fireEvent.dragStart(row(a.id), { dataTransfer });
+    fireEvent.dragOver(row(b.id), { dataTransfer });
+    fireEvent.drop(row(b.id), { dataTransfer });
+    fireEvent.dragStart(row(a.id), { dataTransfer });
+    fireEvent.drop(row(a.id).closest('ul')!.parentElement!, { dataTransfer });
+
+    await new Promise((r) => setTimeout(r, 50));
+    const decks = await repo.listDecks();
+    expect(decks.every((d) => d.folderId === folder.id)).toBe(true);
+  });
+
+  it('keeps both Undo toasts when deleting twice', async () => {
+    const user = userEvent.setup();
+    await repo.saveDeck(mkDeck({ name: 'One' }));
+    await repo.saveDeck(mkDeck({ name: 'Two' }));
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: 'More actions for One' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(await screen.findByRole('button', { name: 'More actions for Two' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(await screen.findAllByRole('button', { name: 'Undo' })).toHaveLength(2);
+  });
+
+  it('menu moves focus in, and Escape returns it to the trigger', async () => {
+    const user = userEvent.setup();
+    await repo.saveDeck(mkDeck({ name: 'Biology' }));
+    renderAt('/');
+    const trigger = await screen.findByRole('button', { name: 'More actions for Biology' });
+    await user.click(trigger);
+    expect(screen.getByRole('button', { name: 'Edit' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
   });
 });
