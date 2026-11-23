@@ -1,4 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const compress = vi.hoisted(() => ({ calls: 0 }));
+vi.mock('lz-string', async (orig) => {
+  const actual = (await orig<{ default: typeof import('lz-string') }>()).default;
+  const counted = {
+    ...actual,
+    compressToEncodedURIComponent: (s: string) => {
+      compress.calls++;
+      return actual.compressToEncodedURIComponent(s);
+    },
+  };
+  return { ...counted, default: counted };
+});
+
 import type { BackupMedia } from '../../src/domain/backup';
 import { baseRecord } from '../../src/domain/ids';
 import { buildSharePayload, decodeShare, encodeShare, payloadToBackup } from '../../src/domain/share';
@@ -69,5 +83,18 @@ describe('share payloads', () => {
     expect(file.scope).toBe('deck');
     expect(file.decks[0]).toMatchObject({ id: d.id, sourceId: d.id, folderId: null, deletedAt: null });
     expect(file.cards[0]).toMatchObject({ deckId: d.id, suspended: false, trouble: false });
+  });
+
+  it('compresses a bounded number of times however many images there are', () => {
+    const d = deck();
+    const ids = Array.from({ length: 60 }, (_, i) => `m${i}`);
+    const cards = ids.map((id) => card(d.id, { front: `![](media:${id})` }));
+    const store = new Map(ids.map((id) => [id, media(id, 5_000)]));
+    compress.calls = 0;
+    const { payload, droppedImages } = buildSharePayload(d, cards, (id) => store.get(id), 100_000);
+    expect(compress.calls).toBeLessThanOrEqual(4);
+    expect(payload.media.length + droppedImages).toBe(60);
+    expect(droppedImages).toBeGreaterThan(0);
+    expect(encodeShare(payload).length).toBeLessThanOrEqual(100_000);
   });
 });

@@ -10,13 +10,10 @@ import { strings } from '../strings';
 import { importShare, type ShareImportMode } from './importShare';
 
 const PREVIEW_CARDS = 5;
-const MEDIA_MARKDOWN = /!\[[^\]]*\]\(media:[\w-]+\)/g;
 
 const primary = 'inline-flex min-h-11 items-center rounded-lg bg-accent-600 px-4 font-medium text-white hover:bg-accent-700';
 const secondary =
   'inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800';
-
-const withPlaceholders = (text: string) => text.replace(MEDIA_MARKDOWN, strings.sharePreview.imagePlaceholder);
 
 export default function SharePreviewPage() {
   const encoded = useParams()['*'] ?? '';
@@ -79,9 +76,9 @@ function Preview({ payload }: { payload: SharePayload }) {
       <ul className="space-y-2">
         {cards.slice(0, PREVIEW_CARDS).map((c) => (
           <li key={c.id} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-            <CardContent markdown={withPlaceholders(c.front)} lang={c.langFront} />
+            <CardContent markdown={c.front} noImages lang={c.langFront} />
             <div className="mt-2 border-t border-slate-200 pt-2 dark:border-slate-700">
-              <CardContent markdown={withPlaceholders(c.back)} lang={c.langBack} />
+              <CardContent markdown={c.back} noImages lang={c.langBack} />
             </div>
           </li>
         ))}

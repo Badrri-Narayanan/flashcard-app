@@ -297,6 +297,7 @@ export const strings = {
   share: {
     title: (name: string) => `Share “${name}”`,
     preparing: 'Preparing link…',
+    preparingImages: (done: number, total: number) => `Preparing link… image ${done + 1} of ${total}`,
     linkLabel: 'Share link',
     copy: 'Copy link',
     copied: 'Link copied',

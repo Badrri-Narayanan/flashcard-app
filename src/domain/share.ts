@@ -60,7 +60,15 @@ function referencedMedia(cards: Pick<Card, 'front' | 'back' | 'mnemonic' | 'dist
   return [...ids];
 }
 
-/** Images are added in card order while the encoded payload stays within `budgetBytes`; the rest are dropped. */
+/** Encoded length per base64 character for media; base64 barely compresses, so this is a safe over-estimate. */
+const MEDIA_ENCODE_FACTOR = 1.6;
+const mediaCost = (m: BackupMedia) => Math.ceil((m.dataBase64.length + m.mime.length + 64) * MEDIA_ENCODE_FACTOR);
+
+/**
+ * Images are added in card order while the estimated encoded size stays within `budgetBytes`; the rest are dropped.
+ * Compresses the text once to get a baseline, estimates media by length, and verifies with one final encode
+ * (dropping trailing images only in the rare case the estimate was too low).
+ */
 export function buildSharePayload(
   deck: Deck,
   cards: Card[],
@@ -79,13 +87,20 @@ export function buildSharePayload(
     })),
     media: [],
   };
+  let used = encodeShare(payload).length;
   let dropped = 0;
   for (const id of referencedMedia(payload.cards)) {
     const m = mediaLookup(id);
     if (!m) continue;
-    const trial = { ...payload, media: [...payload.media, m] };
-    if (encodeShare(trial).length <= budgetBytes) payload.media = trial.media;
-    else dropped++;
+    const cost = mediaCost(m);
+    if (used + cost <= budgetBytes) {
+      payload.media.push(m);
+      used += cost;
+    } else dropped++;
+  }
+  while (payload.media.length > 0 && encodeShare(payload).length > budgetBytes) {
+    payload.media.pop();
+    dropped++;
   }
   return { payload, droppedImages: dropped };
 }

@@ -89,6 +89,17 @@ describe('share preview', () => {
     expect(screen.queryByRole('button', { name: 'Update my copy' })).not.toBeInTheDocument();
   });
 
+  it('never renders remote or stored images in the preview', async () => {
+    const source = mkDeck();
+    const cards = [
+      mkCard(source.id, { front: '![x](https://example.com/a.png) ![y][r]\n\n[r]: https://example.com/b.png', back: '![z](media:abc)' }),
+    ];
+    const { container } = open(linkFor(source, cards));
+    await screen.findByRole('heading', { name: /Spanish/ });
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+    expect(screen.getAllByText('[image]').length).toBeGreaterThanOrEqual(2);
+  });
+
   it('shows a friendly message with a way home for a truncated link', async () => {
     const source = mkDeck();
     const cards = Array.from({ length: 20 }, (_, i) => mkCard(source.id, { front: `q${i}-${Math.random()}` }));

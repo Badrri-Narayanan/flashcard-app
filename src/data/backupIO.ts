@@ -130,10 +130,17 @@ export async function exportBackup(scope: BackupScope, id: Id | null, opts: { in
 }
 
 /** Base64 media referenced by the cards, keyed by id; ids with no stored image are simply absent. */
-export async function loadBackupMedia(cards: Card[]): Promise<Map<Id, BackupMedia>> {
+export async function loadBackupMedia(
+  cards: Card[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<Map<Id, BackupMedia>> {
   const ids = [...new Set(cards.flatMap(mediaIdsIn))];
   const out = new Map<Id, BackupMedia>();
+  let done = 0;
   for (const id of ids) {
+    // Yield between images so the page stays responsive and progress can paint.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    onProgress?.(done++, ids.length);
     const [m] = await repo.listMedia([id]);
     if (m) out.set(id, { id: m.id, mime: m.mime, width: m.width, height: m.height, dataBase64: bytesToBase64(await blobBytes(m.blob)) });
   }

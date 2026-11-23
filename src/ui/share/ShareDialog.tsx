@@ -43,13 +43,14 @@ function QrCode({ url }: { url: string }) {
 export default function ShareDialog({ deck, onClose }: Props) {
   const [built, setBuilt] = useState<Built | null>(null);
   const [error, setError] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const cards = await repo.listCards(deck.id);
-      const media = await loadBackupMedia(cards);
+      const media = await loadBackupMedia(cards, (done, total) => !cancelled && setProgress({ done, total }));
       const { payload, droppedImages } = buildSharePayload(deck, cards, (id) => media.get(id));
       if (!cancelled) setBuilt({ url: shareUrl(encodeShare(payload)), droppedImages });
     })().catch((err) => {
@@ -99,7 +100,7 @@ export default function ShareDialog({ deck, onClose }: Props) {
   return (
     <Dialog title={strings.share.title(deck.name)} onClose={onClose}>
       <div className="space-y-3">
-        {!built && !error && <p>{strings.share.preparing}</p>}
+        {!built && !error && <p>{progress && progress.total > 0 ? strings.share.preparingImages(progress.done, progress.total) : strings.share.preparing}</p>}
         {error && <p role="alert">{strings.share.loadFailed}</p>}
         {built && tooLong && (
           <>
