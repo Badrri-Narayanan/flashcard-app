@@ -211,6 +211,10 @@ export class DexieRepository implements Repository {
     return (await this.db.cards.where('deckId').equals(deckId).toArray()).filter(isLive);
   }
 
+  async listAllCards(): Promise<Card[]> {
+    return (await this.db.cards.toArray()).filter(isLive);
+  }
+
   async getCard(id: Id): Promise<Card | undefined> {
     return this.db.cards.get(id);
   }

@@ -84,6 +84,19 @@ describe('DexieRepository', () => {
     expect(await db.reviewItems.where('cardId').equals(earlier.id).filter((i) => i.deletedAt === null).count()).toBe(0);
   });
 
+  it('listAllCards returns live cards from every deck and excludes deleted ones', async () => {
+    const a = mkDeck();
+    const b = mkDeck();
+    await repo.saveDeck(a);
+    await repo.saveDeck(b);
+    const ca = mkCard(a.id);
+    const cb = mkCard(b.id);
+    const gone = mkCard(b.id);
+    await repo.saveCards([ca, cb, gone]);
+    await repo.deleteCards([gone.id]);
+    expect((await repo.listAllCards()).map((c) => c.id).sort()).toEqual([ca.id, cb.id].sort());
+  });
+
   it('countDue uses due <= until and excludes suspended cards and deleted items', async () => {
     const deck = mkDeck();
     await repo.saveDeck(deck);

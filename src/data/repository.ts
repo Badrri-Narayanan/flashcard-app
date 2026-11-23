@@ -27,6 +27,8 @@ export interface Repository {
   moveDeck(id: Id, folderId: Id | null): Promise<void>;
 
   listCards(deckId: Id): Promise<Card[]>;
+  /** All non-deleted cards across decks; for building the global search index. */
+  listAllCards(): Promise<Card[]>;
   /** Returns soft-deleted rows too, so Undo can find them. */
   getCard(id: Id): Promise<Card | undefined>;
   saveCard(card: Card): Promise<void>;
