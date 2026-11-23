@@ -17,6 +17,9 @@ describe('parseClozeNumbers', () => {
   it('treats c0 and non-numeric cX as bare blanks', () => {
     expect(parseClozeNumbers('{{c0::x}} {{cX::y}}')).toEqual([1, 2]);
   });
+  it('tokenizes blanks whose answer spans a newline', () => {
+    expect(parseClozeNumbers('{{c1::line1\nline2}}')).toEqual([1]);
+  });
   it('returns empty for text without blanks', () => {
     expect(parseClozeNumbers('plain')).toEqual([]);
   });
@@ -32,6 +35,9 @@ describe('renderCloze', () => {
   });
   it('uses an ellipsis when there is no hint', () => {
     expect(renderCloze(text, 1, false)).toBe('Capital of **[…]** is Paris');
+  });
+  it('falls back to an ellipsis for an empty hint', () => {
+    expect(renderCloze('{{c1::a::}}', 1, false)).toBe('**[…]**');
   });
   it('hides all occurrences of the same number together', () => {
     expect(renderCloze('{{c1::a}} {{c1::b}}', 1, false)).toBe('**[…]** **[…]**');

@@ -6,7 +6,7 @@ interface Blank {
   hint: string | null;
 }
 
-const BLANK_RE = /\{\{(.*?)\}\}/g;
+const BLANK_RE = /\{\{(.*?)\}\}/gs;
 const EXPLICIT_RE = /^c([1-9]\d*)::(.*)$/s;
 
 function parseBlanks(text: string): Blank[] {
@@ -38,7 +38,7 @@ export function renderCloze(text: string, n: number, reveal: boolean): string {
     out += text.slice(pos, b.start);
     if (b.n !== n) out += b.answer;
     else if (reveal) out += `**${b.answer}**`;
-    else out += `**[${b.hint ?? '…'}]**`;
+    else out += `**[${b.hint || '…'}]**`;
     pos = b.end;
   }
   return out + text.slice(pos);
