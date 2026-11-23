@@ -32,3 +32,67 @@ samp {
     scroll-behavior: auto !important;
   }
 }
+
+.card-content p,
+.card-content pre,
+.card-content ul,
+.card-content ol,
+.card-content table {
+  margin-block: 0.5em;
+}
+
+.card-content ul {
+  list-style: disc;
+  padding-inline-start: 1.5em;
+}
+
+.card-content ol {
+  list-style: decimal;
+  padding-inline-start: 1.5em;
+}
+
+.card-content pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.card-content th,
+.card-content td {
+  border: 1px solid rgb(148 163 184 / 0.5);
+  padding: 0.25rem 0.5rem;
+}
+
+.dark .hljs {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #94a3b8;
+}
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-doctag {
+  color: #f472b6;
+}
+.dark .hljs-string,
+.dark .hljs-regexp,
+.dark .hljs-addition {
+  color: #86efac;
+}
+.dark .hljs-number,
+.dark .hljs-literal,
+.dark .hljs-attr,
+.dark .hljs-variable {
+  color: #fcd34d;
+}
+.dark .hljs-title,
+.dark .hljs-section,
+.dark .hljs-built_in,
+.dark .hljs-type {
+  color: #93c5fd;
+}
+.dark .hljs-deletion {
+  color: #fca5a5;
+}

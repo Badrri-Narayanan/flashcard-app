@@ -250,4 +250,15 @@ describe('DexieRepository', () => {
     expect(await repo.getNewItems([d1.id, d2.id], 4)).toHaveLength(4);
     expect(await repo.getNewItems([d1.id], 2)).toHaveLength(2);
   });
+
+  it('getReviewItemsForCard returns live items only', async () => {
+    const deck = mkDeck();
+    await repo.saveDeck(deck);
+    const card = mkCard(deck.id, { type: 'reversible' });
+    await repo.saveCard(card);
+    expect((await repo.getReviewItemsForCard(card.id)).map((i) => i.variant).sort()).toEqual(['fwd', 'rev']);
+    await repo.saveCard({ ...card, type: 'basic' });
+    expect((await repo.getReviewItemsForCard(card.id)).map((i) => i.variant)).toEqual(['fwd']);
+    expect(await repo.getReviewItemsForCard('missing')).toEqual([]);
+  });
 });

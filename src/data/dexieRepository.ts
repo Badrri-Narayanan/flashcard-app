@@ -340,6 +340,10 @@ export class DexieRepository implements Repository {
   }
 
   // media
+  async getReviewItemsForCard(cardId: Id): Promise<ReviewItem[]> {
+    return (await this.db.reviewItems.where('cardId').equals(cardId).toArray()).filter(isLive);
+  }
+
   putMedia(m: Media): Promise<void> {
     return this.write(async () => {
       await this.db.media.put(m);

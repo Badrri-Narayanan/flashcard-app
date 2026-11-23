@@ -36,6 +36,8 @@ export interface Repository {
   deleteCards(ids: Id[]): Promise<void>;
   restoreCards(ids: Id[]): Promise<void>;
 
+  /** Live review items for one card (all variants). */
+  getReviewItemsForCard(cardId: Id): Promise<ReviewItem[]>;
   getDueItems(deckIds: Id[], until: number, limit: number): Promise<ReviewItem[]>;
   getNewItems(deckIds: Id[], limit: number): Promise<ReviewItem[]>;
   countDue(deckId: Id, until: number): Promise<{ due: number; new: number }>;
