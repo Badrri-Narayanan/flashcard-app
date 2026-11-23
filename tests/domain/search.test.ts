@@ -39,8 +39,20 @@ describe('SearchIndex', () => {
     expect(ids(idx.search('site pic'))).toEqual(['1']);
     expect(idx.search('http')).toEqual([]);
     expect(idx.search('abc123')).toEqual([]);
-    expect(idx.search('```')).toEqual([]);
+    expect(idx.search('js')).toEqual([]);
     expect(ids(idx.search('let'))).toEqual(['2']);
+  });
+
+  it('normalizes queries like indexed text', () => {
+    const idx = new SearchIndex([
+      card('1', 'snake_case naming'),
+      card('2', '**bold** and C# and _em_'),
+      card('3', 'unrelated'),
+    ]);
+    expect(ids(idx.search('snake_case'))).toEqual(['1']);
+    expect(ids(idx.search('**bold**'))).toEqual(['2']);
+    expect(ids(idx.search('C#'))).toContain('2');
+    expect(ids(idx.search('_em_'))).toEqual(['2']);
   });
 
   it('ignores deleted cards and keeps input order', () => {

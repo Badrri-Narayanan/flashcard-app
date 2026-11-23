@@ -8,9 +8,10 @@ function fold(text: string): string {
 
 function stripMarkdown(text: string): string {
   return text
+    .replace(/^[ \t]*```[\w+-]*[ \t]*$/gm, '')
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/media:[\w-]+/g, '')
-    .replace(/[`*_#>]/g, '');
+    .replace(/[`*#>]|(?<!\w)_|_(?!\w)/g, '');
 }
 
 function normalize(text: string): string {
@@ -37,7 +38,7 @@ export class SearchIndex {
   }
 
   search(q: string, opts: { tag?: string; limit?: number } = {}): Card[] {
-    const tokens = fold(q).split(/\s+/).filter(Boolean);
+    const tokens = q.split(/\s+/).map(normalize).filter(Boolean);
     const tag = opts.tag === undefined ? null : fold(opts.tag);
     const limit = opts.limit ?? DEFAULT_LIMIT;
     const out: Card[] = [];
