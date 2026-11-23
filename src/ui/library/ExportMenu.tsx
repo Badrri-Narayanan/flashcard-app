@@ -20,7 +20,7 @@ interface DialogProps extends Props {
   onClose: () => void;
 }
 
-const CSV_BOM = '﻿';
+const CSV_BOM = '\uFEFF';
 const item =
   'flex min-h-11 w-full items-center rounded-lg border border-slate-300 bg-white px-4 font-medium hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800';
 

@@ -53,6 +53,26 @@ describe('import page', () => {
     expect(within(table).getAllByRole('row')[1]).toHaveTextContent(/^holahello/);
   });
 
+  it('a dropped .csv still shows the imported toast after the import closes the dialog', async () => {
+    const d = mkDeck();
+    await repo.saveDeck(d);
+    const { page } = await setup(`/import?deck=${d.id}`);
+    drop(page, new File(['hola,hello\nadios,bye'], 'cards.csv', { type: 'text/csv' }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Import 2 cards' }));
+    expect(await screen.findByText('Imported 2 cards')).toBeInTheDocument();
+  });
+
+  it('a dropped .txt still shows the imported toast after the import closes the dialog', async () => {
+    const d = mkDeck();
+    await repo.saveDeck(d);
+    const { page } = await setup(`/import?deck=${d.id}`);
+    drop(page, new File(['hola - hello\nadios - bye'], 'words.txt', { type: 'text/plain' }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Create 2 cards' }));
+    expect(await screen.findByText('Created 2 cards')).toBeInTheDocument();
+  });
+
   it('dropping a .txt opens the paste dialog prefilled with its text', async () => {
     await repo.saveDeck(mkDeck());
     const { page } = await setup();
@@ -69,8 +89,7 @@ describe('import page', () => {
   });
 
   it('JSON import shows the summary', async () => {
-    const { page } = await setup('/import?mode=json');
-    void page;
+    await setup('/import?mode=json');
     const user = userEvent.setup();
     await user.upload(await screen.findByLabelText('Backup JSON file'), new File([backupJson(11)], 'backup.json', { type: 'application/json' }));
     await user.click(await screen.findByRole('button', { name: 'Import' }));

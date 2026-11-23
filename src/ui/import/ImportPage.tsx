@@ -93,8 +93,8 @@ export default function ImportPage() {
           {message}
         </p>
       )}
-      <BulkPasteDialog key={active?.text} open={active?.mode === 'paste'} deckId={deckId} initialText={active?.text} onClose={close} />
-      <CsvImportDialog key={active?.file?.name} open={active?.mode === 'csv'} deckId={deckId} initialFile={active?.file} onClose={close} />
+      <BulkPasteDialog open={active?.mode === 'paste'} deckId={deckId} initialText={active?.text} onClose={close} />
+      <CsvImportDialog open={active?.mode === 'csv'} deckId={deckId} initialFile={active?.file} onClose={close} />
       {active?.mode === 'json' && <JsonImportDialog initialFile={active.file} onClose={close} />}
     </section>
   );
