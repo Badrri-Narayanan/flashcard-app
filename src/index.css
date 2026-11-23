@@ -1,3 +1,34 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  font-family: var(--font-ui, system-ui, sans-serif);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+[data-reduce-motion='on'] *,
+[data-reduce-motion='on'] *::before,
+[data-reduce-motion='on'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reduce-motion='system'] *,
+  [data-reduce-motion='system'] *::before,
+  [data-reduce-motion='system'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
