@@ -7,6 +7,7 @@ import type { Card } from '../../domain/types';
 import ToastRegion from '../components/ToastRegion';
 import { UNDO_TOAST_MS } from '../components/toastTiming';
 import { strings } from '../strings';
+import ShareDialog from '../share/ShareDialog';
 import { plainPreview } from './editorLogic';
 
 interface Toast {
@@ -31,6 +32,7 @@ export default function DeckPage() {
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [sharing, setSharing] = useState(false);
 
   const index = useMemo(() => new SearchIndex(cards), [cards]);
   const tags = useMemo(() => [...new Set(cards.flatMap((c) => c.tags))].sort((a, b) => a.localeCompare(b)), [cards]);
@@ -78,6 +80,7 @@ export default function DeckPage() {
           <h1 className="text-2xl font-bold">{`${deck.emoji} ${deck.name}`}</h1>
           <div className="flex gap-2">
             <Link to={`/study/deck/${id}/learn`} className={secondary}>{strings.deck.study}</Link>
+            <button type="button" onClick={() => setSharing(true)} className={secondary}>{strings.deck.share}</button>
             <Link to={addHref} className={primary}>{strings.deck.addCard}</Link>
           </div>
         </div>
@@ -153,6 +156,7 @@ export default function DeckPage() {
           })}
         </ul>
       )}
+      {sharing && <ShareDialog deck={deck} onClose={() => setSharing(false)} />}
       <ToastRegion toasts={toasts} onClose={dismiss} />
     </div>
   );

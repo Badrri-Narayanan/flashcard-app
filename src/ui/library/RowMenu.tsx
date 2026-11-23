@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TreeNode } from '../../domain/tree';
 import { strings } from '../strings';
 
-export type RowAction = 'edit' | 'move' | 'duplicate' | 'delete';
+export type RowAction = 'edit' | 'move' | 'duplicate' | 'share' | 'delete';
 
 interface Props {
   node: TreeNode;
@@ -41,7 +41,10 @@ export default function RowMenu({ node, onAction }: Props) {
   const items: { action: RowAction; label: string }[] = [
     { action: 'edit', label: node.kind === 'folder' ? strings.menu.rename : strings.menu.edit },
     { action: 'move', label: strings.menu.moveTo },
-    ...(node.kind === 'deck' ? [{ action: 'duplicate' as const, label: strings.menu.duplicate }] : []),
+    ...(node.kind === 'deck' ? [
+          { action: 'duplicate' as const, label: strings.menu.duplicate },
+          { action: 'share' as const, label: strings.menu.share },
+        ] : []),
     { action: 'delete', label: strings.menu.delete },
   ];
 

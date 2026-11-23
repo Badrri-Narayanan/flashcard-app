@@ -7,15 +7,17 @@ import { strings } from '../strings';
 interface Props {
   node: TreeNode;
   folders: Folder[];
-  currentParentId: Id | null;
+  /** Omit when the item has no current location (e.g. a deck being added). */
+  currentParentId?: Id | null;
   onPick: (parentId: Id | null) => void;
   onClose: () => void;
+  title?: string;
 }
 
 const itemClass =
   'flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-start hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800';
 
-export default function MovePicker({ node, folders, currentParentId, onPick, onClose }: Props) {
+export default function MovePicker({ node, folders, currentParentId, onPick, onClose, title }: Props) {
   const folderTree = buildTree(folders, []);
 
   function rows(nodes: TreeNode[], depth: number): ReactNode {
@@ -41,7 +43,7 @@ export default function MovePicker({ node, folders, currentParentId, onPick, onC
   }
 
   return (
-    <Dialog title={strings.move.title(node.name)} onClose={onClose}>
+    <Dialog title={title ?? strings.move.title(node.name)} onClose={onClose}>
       <ul>
         <li>
           <button type="button" onClick={() => onPick(null)} className={itemClass}>

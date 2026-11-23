@@ -6,6 +6,7 @@ import DeckPage from './editor/DeckPage';
 import StudyHome from './study/StudyHome';
 import StudyPage from './study/StudyPage';
 import ImportPage from './import/ImportPage';
+import SharePreviewPage from './share/SharePreviewPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 
 /** Later tasks add their routes here, before the catch-all. */
@@ -20,6 +21,7 @@ export const routes: RouteObject[] = [
       { path: '/study', element: <StudyHome /> },
       { path: '/study/:scope/:id/:mode', element: <StudyPage /> },
       { path: '/import', element: <ImportPage /> },
+      { path: '/share/*', element: <SharePreviewPage /> },
       { path: '*', element: <ComingSoonPage /> },
     ],
   },
