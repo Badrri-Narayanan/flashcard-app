@@ -6,14 +6,22 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { useMediaUrl } from '../hooks/useMediaUrl';
+import { strings } from '../strings';
 
 const MEDIA_PREFIX = 'media:';
 const remarkPlugins = [remarkGfm, remarkMath];
 const rehypePlugins = [rehypeKatex, rehypeHighlight];
 
 function MediaImage({ id, alt }: { id: string; alt?: string }) {
-  const src = useMediaUrl(id);
-  if (!src) return null;
+  const { url: src, status } = useMediaUrl(id);
+  if (status === 'missing') {
+    return (
+      <span className="inline-block rounded border border-dashed border-slate-400 px-2 py-1 text-sm text-slate-600 dark:text-slate-400">
+        {alt ? `${strings.common.imageNotFound} (${alt})` : strings.common.imageNotFound}
+      </span>
+    );
+  }
+  if (!src) return <span aria-hidden className="inline-block h-24 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />;
   return <img src={src} alt={alt ?? ''} className="max-w-full" />;
 }
 

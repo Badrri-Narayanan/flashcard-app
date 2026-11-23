@@ -1,22 +1,22 @@
-import { useState, type KeyboardEvent } from 'react';
+import type { KeyboardEvent } from 'react';
 import { strings } from '../strings';
+import { mergeTags } from './editorLogic';
 
 interface Props {
   tags: string[];
+  draft: string;
+  onDraftChange: (draft: string) => void;
   onChange: (tags: string[]) => void;
 }
 
-export default function TagInput({ tags, onChange }: Props) {
-  const [draft, setDraft] = useState('');
-
+export default function TagInput({ tags, draft, onDraftChange, onChange }: Props) {
   function commit(raw: string) {
-    const parts = raw.split(',').map((t) => t.trim()).filter(Boolean);
-    const fresh = parts.filter((t, i) => !tags.includes(t) && parts.indexOf(t) === i);
-    if (fresh.length > 0) onChange([...tags, ...fresh]);
-    setDraft('');
+    onChange(mergeTags(tags, raw));
+    onDraftChange('');
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.nativeEvent.isComposing) return;
     if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
       commit(draft);
@@ -48,8 +48,8 @@ export default function TagInput({ tags, onChange }: Props) {
           placeholder={strings.editor.tagHint}
           onChange={(e) => {
             const v = e.target.value;
-            if (v.includes(',')) commit(v);
-            else setDraft(v);
+            if (v.includes(',') && !(e.nativeEvent as InputEvent).isComposing) commit(v);
+            else onDraftChange(v);
           }}
           onKeyDown={onKeyDown}
           onBlur={() => commit(draft)}

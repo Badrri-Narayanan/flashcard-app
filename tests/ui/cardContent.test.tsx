@@ -56,4 +56,9 @@ describe('CardContent', () => {
     const a = screen.getByText('x').closest('a');
     expect(a?.getAttribute('href') ?? '').not.toMatch(/javascript:/i);
   });
+
+  it('shows a placeholder when the media is missing', async () => {
+    render(<CardContent markdown="![pic](media:nope)" />);
+    expect(await screen.findByText('Image not found (pic)')).toBeInTheDocument();
+  });
 });

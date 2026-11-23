@@ -68,6 +68,7 @@ describe('card editor', () => {
     const user = userEvent.setup();
     const { deck } = await setup();
     await user.type(await front(), 'one');
+    await user.type(screen.getByLabelText('Back'), 'uno');
     await user.keyboard('{Control>}{Enter}{/Control}');
     await waitFor(async () => expect(await repo.listCards(deck.id)).toHaveLength(1));
     expect(await front()).toHaveValue('');
@@ -77,6 +78,7 @@ describe('card editor', () => {
     const user = userEvent.setup();
     const { deck, router } = await setup();
     await user.type(await front(), 'one');
+    await user.type(screen.getByLabelText('Back'), 'uno');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(router.state.location.pathname).toBe(`/deck/${deck.id}`));
     expect(await screen.findByRole('heading', { name: /Spanish/ })).toBeInTheDocument();
@@ -86,7 +88,64 @@ describe('card editor', () => {
     const user = userEvent.setup();
     await setup();
     await user.click(await screen.findByRole('button', { name: 'Save' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Please enter the front of the card.');
+    const alerts = await screen.findAllByRole('alert');
+    expect(alerts.map((a) => a.textContent)).toEqual(['Please enter the front of the card.', 'Please enter the back of the card.']);
+  });
+
+  it('requires a back for basic cards and a correct answer for mcq', async () => {
+    const user = userEvent.setup();
+    await setup();
+    await user.type(await front(), 'q');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please enter the back of the card.');
+    await user.selectOptions(screen.getByLabelText('Card type'), 'mcq');
+    await user.type(screen.getByLabelText('Wrong answer 1'), 'w');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please enter the correct answer.');
+  });
+
+  it('dirty Cancel asks to discard; clean Cancel leaves immediately', async () => {
+    const user = userEvent.setup();
+    const { deck, router } = await setup();
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/deck/${deck.id}`));
+  });
+
+  it('dirty Cancel shows the discard confirmation', async () => {
+    const user = userEvent.setup();
+    const { deck, router } = await setup();
+    await user.type(await front(), 'draft');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Discard changes?' });
+    expect(router.state.location.pathname).toBe(`/deck/${deck.id}/edit`);
+    await user.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/deck/${deck.id}`));
+    expect(await repo.listCards(deck.id)).toHaveLength(0);
+  });
+
+  it('pending tag text is saved with the card', async () => {
+    const user = userEvent.setup();
+    const { deck } = await setup();
+    await user.type(await front(), 'q');
+    await user.type(screen.getByLabelText('Back'), 'a');
+    await user.type(screen.getByLabelText('Tags'), 'pending');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+    await waitFor(async () => expect((await repo.listCards(deck.id))[0]?.tags).toEqual(['pending']));
+  });
+
+  it('mnemonic disclosure stays open after the text is cleared', async () => {
+    const user = userEvent.setup();
+    await setup();
+    const summary = await screen.findByText('Add a memory hook');
+    await user.click(summary);
+    const details = summary.closest('details')!;
+    await waitFor(() => expect(details.open).toBe(true));
+    await user.type(screen.getByLabelText('Memory hook'), 'x');
+    await user.clear(screen.getByLabelText('Memory hook'));
+    expect(details.open).toBe(true);
   });
 
   it('cloze type with no blanks shows validation message, and Make blank wraps the selection', async () => {
@@ -132,6 +191,7 @@ describe('card editor', () => {
     vi.spyOn(repo, 'saveCard').mockRejectedValueOnce(new Error('boom'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
     await user.type(await front(), 'x');
+    await user.type(screen.getByLabelText('Back'), 'y');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the card');
   });
@@ -166,6 +226,9 @@ describe('card editor', () => {
     expect(dialog).toHaveTextContent('already has study progress');
     expect((await repo.getCard(card.id))!.type).toBe('basic');
 
+    await user.keyboard('{Control>}{Enter}{/Control}');
+    expect(await repo.listCards(deck.id)).toHaveLength(1);
+    expect((await repo.getCard(card.id))!.type).toBe('basic');
     await user.click(within(dialog).getByRole('button', { name: 'Change type' }));
     await waitFor(async () => expect((await repo.getCard(card.id))!.type).toBe('reversible'));
   });

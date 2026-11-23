@@ -28,6 +28,8 @@ export function validate(form: EditorForm): string[] {
   const errors: string[] = [];
   if (!form.front.trim()) errors.push(strings.editor.frontRequired);
   else if (form.type === 'cloze' && parseClozeNumbers(form.front).length === 0) errors.push(strings.editor.clozeNeedsBlank);
+  if (form.type === 'mcq' && !form.back.trim()) errors.push(strings.editor.answerRequired);
+  else if (form.type !== 'cloze' && form.type !== 'mcq' && !form.back.trim()) errors.push(strings.editor.backRequired);
   if (form.type === 'mcq' && form.distractors.every((d) => !d.trim())) errors.push(strings.editor.mcqNeedsDistractor);
   return errors;
 }
@@ -62,4 +64,11 @@ export function plainPreview(markdown: string, max = 80): string {
     .replace(/\s+/g, ' ')
     .trim();
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
+/** Adds comma-separated tags from raw text, skipping blanks and duplicates. */
+export function mergeTags(tags: string[], raw: string): string[] {
+  const parts = raw.split(',').map((t) => t.trim()).filter(Boolean);
+  const fresh = parts.filter((t, i) => !tags.includes(t) && parts.indexOf(t) === i);
+  return fresh.length > 0 ? [...tags, ...fresh] : tags;
 }

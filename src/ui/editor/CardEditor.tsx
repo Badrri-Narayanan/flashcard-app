@@ -2,8 +2,8 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { CardType } from '../../domain/types';
 import CardContent from '../components/CardContent';
-import Dialog from '../components/Dialog';
 import { strings } from '../strings';
+import ConfirmDialog from './ConfirmDialog';
 import DistractorList from './DistractorList';
 import { previewFront } from './editorLogic';
 import ImageButton from './ImageButton';
@@ -20,6 +20,7 @@ export default function CardEditor() {
   const { id = '', cardId } = useParams();
   const ed = useCardEditor(id, cardId);
   const { form, refs, lastField } = ed;
+  const [opened, setOpened] = useState<boolean | null>(null);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function CardEditor() {
             value={form.back} rows={3} onChange={(back) => ed.patch({ back })} {...field('back')} />
           {mcq && <DistractorList values={form.distractors} onChange={(distractors) => ed.patch({ distractors })} />}
 
-          <details open={form.mnemonic !== ''}>
+          <details open={opened ?? form.mnemonic !== ''} onToggle={(e) => setOpened(e.currentTarget.open)}>
             <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">{strings.editor.mnemonic}</summary>
             <label className="block text-sm font-medium">
               {strings.editor.mnemonicLabel}
@@ -95,7 +96,7 @@ export default function CardEditor() {
             </label>
           </details>
 
-          <TagInput tags={form.tags} onChange={(tags) => ed.patch({ tags })} />
+          <TagInput tags={form.tags} draft={ed.tagDraft} onDraftChange={ed.setTagDraft} onChange={(tags) => ed.patch({ tags })} />
           <div className="grid grid-cols-2 gap-3">
             <LanguageSelect label={strings.editor.langFront} value={form.langFront} onChange={(langFront) => ed.patch({ langFront })} />
             <LanguageSelect label={strings.editor.langBack} value={form.langBack} onChange={(langBack) => ed.patch({ langBack })} />
@@ -123,20 +124,20 @@ export default function CardEditor() {
       </div>
 
       <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" onClick={ed.goBack} className={`${btn} hover:bg-slate-100 dark:hover:bg-slate-800`}>{strings.common.cancel}</button>
+        <button type="button" onClick={ed.cancel} className={`${btn} hover:bg-slate-100 dark:hover:bg-slate-800`}>{strings.common.cancel}</button>
         <button type="button" disabled={ed.saving} onClick={() => void ed.submit(false)} className={secondary}>{strings.common.save}</button>
+        <span className="hidden self-center text-xs text-slate-600 md:inline dark:text-slate-400">{strings.editor.shortcutHint}</span>
         <button type="button" disabled={ed.saving} onClick={() => void ed.submit(true)}
           className={`${btn} bg-accent-600 text-white hover:bg-accent-700 disabled:opacity-60`}>{strings.editor.saveAndAdd}</button>
       </div>
 
       {ed.confirmAdd !== null && (
-        <Dialog title={strings.editor.typeChangeTitle} onClose={ed.cancelTypeChange}>
-          <p>{strings.editor.typeChangeWarning}</p>
-          <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={ed.cancelTypeChange} className={`${btn} hover:bg-slate-100 dark:hover:bg-slate-800`}>{strings.common.cancel}</button>
-            <button type="button" onClick={() => void ed.confirmTypeChange()} className={`${btn} bg-accent-600 text-white hover:bg-accent-700`}>{strings.editor.typeChangeConfirm}</button>
-          </div>
-        </Dialog>
+        <ConfirmDialog title={strings.editor.typeChangeTitle} body={strings.editor.typeChangeWarning}
+          confirmLabel={strings.editor.typeChangeConfirm} onConfirm={() => void ed.confirmTypeChange()} onCancel={ed.cancelTypeChange} />
+      )}
+      {ed.confirmDiscard && (
+        <ConfirmDialog title={strings.editor.discardTitle} body={strings.editor.discardBody} confirmLabel={strings.editor.discardConfirm}
+          cancelLabel={strings.editor.keepEditing} onConfirm={ed.goBack} onCancel={ed.dismissDiscard} />
       )}
     </form>
   );

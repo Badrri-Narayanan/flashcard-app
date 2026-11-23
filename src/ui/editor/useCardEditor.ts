@@ -4,7 +4,8 @@ import { storeImage } from '../../data/media';
 import { repo } from '../../data/repo';
 import { baseRecord } from '../../domain/ids';
 import type { Card, Id } from '../../domain/types';
-import { EMPTY_FORM, insertAt, validate, wrapBlank, type EditorForm } from './editorLogic';
+import { strings } from '../strings';
+import { EMPTY_FORM, insertAt, mergeTags, validate, wrapBlank, type EditorForm } from './editorLogic';
 
 export type Field = 'front' | 'back';
 export type LoadState = 'loading' | 'ready' | 'missing';
@@ -25,6 +26,9 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
   const navigate = useNavigate();
   const [state, setState] = useState<LoadState>('loading');
   const [form, setForm] = useState<EditorForm>(EMPTY_FORM);
+  const [baseline, setBaseline] = useState<EditorForm>(EMPTY_FORM);
+  const [tagDraft, setTagDraft] = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [existing, setExisting] = useState<Card | undefined>();
   const [errors, setErrors] = useState<string[]>([]);
   const [saveError, setSaveError] = useState(false);
@@ -50,6 +54,7 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
         loadedId.current = cardId;
         setExisting(card);
         setForm(formOf(card));
+        setBaseline(formOf(card));
       }
       setState('ready');
     })().catch((err: unknown) => {
@@ -77,6 +82,8 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
   }, []);
 
   const goBack = useCallback(() => navigate(`/deck/${deckId}`), [navigate, deckId]);
+  const dirty = tagDraft.trim() !== '' || JSON.stringify(form) !== JSON.stringify(baseline);
+  const cancel = () => (dirty ? setConfirmDiscard(true) : goBack());
 
   async function persist(addAnother: boolean) {
     setSaving(true);
@@ -87,7 +94,7 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
       back: form.back.trim(),
       distractors: form.type === 'mcq' ? form.distractors.map((d) => d.trim()).filter(Boolean) : [],
       mnemonic: form.mnemonic.trim(),
-      tags: form.tags,
+      tags: mergeTags(form.tags, tagDraft),
       langFront: form.langFront,
       langBack: form.langBack,
     };
@@ -103,7 +110,10 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
       return;
     }
     if (!addAnother) return goBack();
-    setForm((f) => ({ ...EMPTY_FORM, type: f.type, tags: f.tags, langFront: f.langFront, langBack: f.langBack }));
+    const next: EditorForm = { ...EMPTY_FORM, type: fields.type, tags: fields.tags, langFront: fields.langFront, langBack: fields.langBack };
+    setForm(next);
+    setBaseline(next);
+    setTagDraft('');
     setExisting(undefined);
     setSaved(true);
     setSaving(false);
@@ -146,7 +156,7 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
     setImageError(false);
     try {
       for (const file of files) {
-        const md = `![image](${await storeImage(file)})`;
+        const md = `![${strings.editor.imageAlt}](${await storeImage(file)})`;
         const el = refs[field].current;
         const value = el?.value ?? form[field];
         const out = insertAt(value, el?.selectionStart ?? value.length, el?.selectionEnd ?? value.length, md);
@@ -160,6 +170,7 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
   }
 
   return {
+    tagDraft, setTagDraft, dirty, cancel, confirmDiscard, dismissDiscard: () => setConfirmDiscard(false),
     state, form, existing, errors, saveError, imageError, saving, saved, confirmAdd,
     refs, lastField, patch, goBack, submit, confirmTypeChange, cancelTypeChange: () => setConfirmAdd(null), makeBlank, addImages,
   };
