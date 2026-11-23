@@ -1,12 +1,11 @@
-const HOUR_MS = 3_600_000;
-
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
 export function dayKey(at: number, dayStartHour: number): string {
-  const d = new Date(at - dayStartHour * HOUR_MS);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const d = new Date(at);
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getHours() < dayStartHour ? 1 : 0));
+  return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
 }
 
 /** Epoch ms of the next local boundary at `dayStartHour` strictly after `at`. */

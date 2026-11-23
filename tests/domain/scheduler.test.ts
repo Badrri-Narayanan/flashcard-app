@@ -67,12 +67,9 @@ describe('previewIntervals', () => {
       at = Math.max(item.due, at + 1);
     }
     const p = previewIntervals(item, at);
-    const ms = (s: string) => {
-      const v = parseFloat(s);
-      return s.endsWith('mo') ? v * 30 : s.endsWith('y') ? v * 365 : s.endsWith('d') ? v : 0;
-    };
-    expect(ms(p[4])).toBeGreaterThanOrEqual(ms(p[3]));
-    expect(ms(p[3])).toBeGreaterThanOrEqual(ms(p[2]));
+    const due = (r: 2 | 3 | 4) => rate(item, r, at, nf).due;
+    expect(due(4)).toBeGreaterThanOrEqual(due(3));
+    expect(due(3)).toBeGreaterThanOrEqual(due(2));
     expect(Object.keys(p)).toEqual(['1', '2', '3', '4']);
   });
 
