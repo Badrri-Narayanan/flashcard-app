@@ -1,4 +1,5 @@
 import type { Card, Deck, Folder, Id, Media, ReviewItem, ReviewLog } from '../domain/types';
+import type { ExistingMeta } from '../domain/backup';
 
 export class StorageFullError extends Error {
   readonly cause?: unknown;
@@ -8,6 +9,15 @@ export class StorageFullError extends Error {
     this.cause = options?.cause;
     this.name = 'StorageFullError';
   }
+}
+
+export interface ImportRecords {
+  folders: Folder[];
+  decks: Deck[];
+  cards: Card[];
+  reviewItems: ReviewItem[];
+  reviewLogs: ReviewLog[];
+  media: Media[];
 }
 
 export interface Repository {
@@ -50,6 +60,15 @@ export interface Repository {
 
   putMedia(m: Media): Promise<void>;
   getMedia(id: Id): Promise<Media | undefined>;
+
+  /** Live review items (all variants) for the given decks. */
+  listReviewItems(deckIds: Id[]): Promise<ReviewItem[]>;
+  /** Live media records for the given ids; unknown or soft-deleted ids are skipped. */
+  listMedia(ids: Id[]): Promise<Media[]>;
+  /** Ids and updatedAt of every record in every synced table, soft-deleted included, so imports never collide. */
+  getExistingMeta(): Promise<ExistingMeta>;
+  /** Raw bulkPut of imported records, bypassing variant reconciliation and timestamp touching. */
+  importRecords(put: Partial<ImportRecords>): Promise<void>;
 
   getKV<T>(key: string): Promise<T | undefined>;
   setKV(key: string, value: unknown): Promise<void>;

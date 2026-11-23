@@ -13,7 +13,8 @@ import type {
   Variant,
 } from '../domain/types';
 import type { FlashcardDB } from './db';
-import { StorageFullError, type Repository } from './repository';
+import type { ExistingMeta } from '../domain/backup';
+import { StorageFullError, type ImportRecords, type Repository } from './repository';
 
 const SUSPENDED_DUE = Number.MAX_SAFE_INTEGER;
 
@@ -319,10 +320,12 @@ export class DexieRepository implements Repository {
   }
 
   async listLogs(range?: { from: number; to: number }, deckIds?: Id[]): Promise<ReviewLog[]> {
+    const decks = deckIds ? new Set(deckIds) : null;
     const logs = range
       ? await this.db.reviewLogs.where('at').between(range.from, range.to, true, true).toArray()
-      : await this.db.reviewLogs.toArray();
-    const decks = deckIds ? new Set(deckIds) : null;
+      : deckIds
+        ? await this.db.reviewLogs.where('deckId').anyOf(deckIds).toArray()
+        : await this.db.reviewLogs.toArray();
     return logs.filter((l) => isLive(l) && (!decks || decks.has(l.deckId)));
   }
 
@@ -356,6 +359,40 @@ export class DexieRepository implements Repository {
 
   async getMedia(id: Id): Promise<Media | undefined> {
     return this.db.media.get(id);
+  }
+
+  // import / export
+  async listReviewItems(deckIds: Id[]): Promise<ReviewItem[]> {
+    return (await this.db.reviewItems.where('deckId').anyOf(deckIds).toArray()).filter(isLive);
+  }
+
+  async listMedia(ids: Id[]): Promise<Media[]> {
+    return (await this.db.media.bulkGet(ids)).filter((m): m is Media => !!m && isLive(m));
+  }
+
+  async getExistingMeta(): Promise<ExistingMeta> {
+    const ids = new Set<Id>();
+    const updatedAt = new Map<Id, number>();
+    for (const table of [this.db.folders, this.db.decks, this.db.cards, this.db.reviewItems, this.db.reviewLogs, this.db.media]) {
+      await table.each((r) => {
+        ids.add(r.id);
+        updatedAt.set(r.id, r.updatedAt);
+      });
+    }
+    return { ids, updatedAt };
+  }
+
+  importRecords(put: Partial<ImportRecords>): Promise<void> {
+    return this.write(() =>
+      this.db.transaction('rw', this.db.tables, async () => {
+        if (put.folders?.length) await this.db.folders.bulkPut(put.folders);
+        if (put.decks?.length) await this.db.decks.bulkPut(put.decks);
+        if (put.cards?.length) await this.db.cards.bulkPut(put.cards);
+        if (put.reviewItems?.length) await this.db.reviewItems.bulkPut(put.reviewItems);
+        if (put.reviewLogs?.length) await this.db.reviewLogs.bulkPut(put.reviewLogs);
+        if (put.media?.length) await this.db.media.bulkPut(put.media);
+      }),
+    );
   }
 
   // kv
