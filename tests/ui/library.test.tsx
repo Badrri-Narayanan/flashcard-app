@@ -81,6 +81,25 @@ describe('library', () => {
     expect(within(li).getByRole('link', { name: /Spanish/ })).toBeInTheDocument();
   });
 
+  it('offers every import option from a non-empty library and from a deck', async () => {
+    const user = userEvent.setup();
+    const deck: Deck = {
+      ...baseRecord(), folderId: null, name: 'Spanish', description: '', color: '', emoji: '📚', order: 0,
+      settings: { ...DEFAULT_DECK_SETTINGS }, sourceId: null, matchBestMs: null,
+    };
+    await repo.saveDeck(deck);
+    renderAt('/');
+    await user.click(await screen.findByRole('link', { name: 'Import' }));
+    for (const name of ['Paste a list', 'Spreadsheet / CSV', 'Backup file']) {
+      expect(await screen.findByRole('button', { name })).toBeInTheDocument();
+    }
+
+    cleanup();
+    renderAt(`/deck/${deck.id}`);
+    expect(await screen.findByRole('link', { name: 'Import' })).toHaveAttribute('href', `/import?deck=${deck.id}`);
+    expect(screen.getByRole('link', { name: 'Import a file' })).toHaveAttribute('href', `/import?mode=csv&deck=${deck.id}`);
+  });
+
   it('picks an emoji from the grid or takes any typed emoji', async () => {
     const user = userEvent.setup();
     renderAt('/');

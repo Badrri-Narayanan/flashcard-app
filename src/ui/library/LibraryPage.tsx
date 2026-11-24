@@ -129,6 +129,7 @@ export default function LibraryPage() {
             <GoalRing />
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link to="/import" className={`${secondary} inline-flex items-center`}>{strings.library.import}</Link>
             <ExportMenu scope={id ? 'folder' : 'library'} id={id ?? null} />
             <button type="button" onClick={() => setDialog({ type: 'folder' })} className={secondary}>{strings.library.newFolder}</button>
             <button type="button" onClick={() => setDialog({ type: 'deck' })} className={primary}>{strings.library.newDeck}</button>

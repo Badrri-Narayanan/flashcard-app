@@ -105,6 +105,7 @@ export default function DeckPage() {
             {troubleCount > 0 && (
               <Link to={`/trouble?deck=${id}`} className={secondary}>{strings.trouble.linkCount(troubleCount)}</Link>
             )}
+            <Link to={`/import?deck=${id}`} className={secondary}>{strings.deck.import}</Link>
             <ExportMenu scope="deck" id={id} />
             <button type="button" onClick={() => setSharing(true)} className={secondary}>{strings.deck.share}</button>
             <button type="button" onClick={() => setEditingSettings(true)} className={secondary}>{strings.deck.settings}</button>
@@ -155,6 +156,7 @@ export default function DeckPage() {
           <div className="flex justify-center gap-2">
             <Link to={addHref} className={primary}>{strings.deck.addCard}</Link>
             <Link to={`/import?mode=paste&deck=${id}`} className={secondary}>{strings.deck.paste}</Link>
+            <Link to={`/import?mode=csv&deck=${id}`} className={secondary}>{strings.deck.emptyImport}</Link>
           </div>
         </div>
       )}
