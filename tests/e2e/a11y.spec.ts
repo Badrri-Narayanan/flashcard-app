@@ -83,3 +83,21 @@ for (const theme of ['light', 'dark'] as const) {
     });
   });
 }
+
+test.describe('non-default accent', () => {
+  test('amber accent keeps library and learn screens free of serious axe violations', async ({ page }) => {
+    await seedSamples(page);
+    await page.goto('/#/settings');
+    await page.getByRole('button', { name: 'Amber' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-accent', 'amber');
+    await page.goto('/#/');
+    await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
+    await expectNoSeriousViolations(page);
+    await page.getByRole('link', { name: /Sample/ }).first().click();
+    await page.getByRole('link', { name: /JavaScript/ }).click();
+    await page.getByRole('main').getByRole('link', { name: 'Study', exact: true }).click();
+    await page.getByRole('button', { name: 'Show answer' }).click();
+    await expect(page.getByRole('group', { name: 'Rate your answer' })).toBeVisible();
+    await expectNoSeriousViolations(page);
+  });
+});

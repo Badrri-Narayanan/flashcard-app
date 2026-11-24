@@ -1,12 +1,15 @@
 import type { AppSettings } from './settings';
 
-// RGB triplets (Tailwind palette 50 / 500 / 600 / 700).
-const ACCENTS: Record<AppSettings['accent'], [string, string, string, string]> = {
+/**
+ * RGB triplets for the accent-50 / -500 / -600 / -700 slots. The 600 and 700 slots carry white button text, so
+ * teal, rose, amber and emerald use Tailwind's 700 / 800 shades there to keep at least 4.5:1 contrast.
+ */
+export const ACCENTS: Record<AppSettings['accent'], [string, string, string, string]> = {
   indigo: ['238 242 255', '99 102 241', '79 70 229', '67 56 202'],
-  teal: ['240 253 250', '20 184 166', '13 148 136', '15 118 110'],
-  rose: ['255 241 242', '244 63 94', '225 29 72', '190 18 60'],
-  amber: ['255 251 235', '245 158 11', '217 119 6', '180 83 9'],
-  emerald: ['236 253 245', '16 185 129', '5 150 105', '4 120 87'],
+  teal: ['240 253 250', '20 184 166', '15 118 110', '17 94 89'],
+  rose: ['255 241 242', '244 63 94', '190 18 60', '159 18 57'],
+  amber: ['255 251 235', '245 158 11', '180 83 9', '146 64 14'],
+  emerald: ['236 253 245', '16 185 129', '4 120 87', '6 95 70'],
   violet: ['245 243 255', '139 92 246', '124 58 237', '109 40 217'],
 };
 
