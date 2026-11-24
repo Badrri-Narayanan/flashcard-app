@@ -92,7 +92,7 @@ export default function TroublePage() {
           </ul>
         </>
       )}
-      {failed && <p role="alert" className="text-sm text-rose-600">{strings.trouble.actionFailed}</p>}
+      {failed && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{strings.trouble.actionFailed}</p>}
     </div>
   );
 }

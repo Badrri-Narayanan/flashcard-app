@@ -200,7 +200,7 @@ function BulkPasteForm({ decks, deckId, initialText, onClose, onCreated }: FormP
               />
             </label>
             {nameError && (
-              <p id={nameErrorId} role="alert" className="text-sm text-rose-600">
+              <p id={nameErrorId} role="alert" className="text-sm text-rose-600 dark:text-rose-400">
                 {strings.bulk.nameRequired}
               </p>
             )}
@@ -305,7 +305,7 @@ function BulkPasteForm({ decks, deckId, initialText, onClose, onCreated }: FormP
           </div>
         )}
         {saveError && (
-          <p role="alert" className="text-sm text-rose-600">
+          <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
             {strings.bulk.createFailed}
           </p>
         )}

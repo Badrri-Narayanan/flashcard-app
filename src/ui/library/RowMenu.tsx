@@ -76,7 +76,7 @@ export default function RowMenu({ node, onAction }: Props) {
                 triggerRef.current?.focus();
                 onAction(action, node);
               }}
-              className={`${itemClass} ${action === 'delete' ? 'text-rose-600' : ''}`}
+              className={`${itemClass} ${action === 'delete' ? 'text-rose-600 dark:text-rose-400' : ''}`}
             >
               {label}
             </button>

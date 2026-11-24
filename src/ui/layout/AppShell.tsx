@@ -65,7 +65,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     'flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-2 text-xs font-medium',
     'md:min-h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:text-sm',
     isActive
-      ? 'text-accent-600 md:bg-accent-50 dark:text-accent-500 dark:md:bg-slate-800'
+      ? 'text-accent-600 md:bg-accent-50 dark:text-slate-50 dark:md:bg-slate-800'
       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100',
   ].join(' ');
 

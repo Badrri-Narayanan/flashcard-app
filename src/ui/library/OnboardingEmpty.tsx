@@ -48,7 +48,7 @@ export default function OnboardingEmpty({ onCreateDeck }: Props) {
           <span id="ob-sample-hint" className={hint}>{o.sampleHint}</span>
         </button>
       </div>
-      {sampleFailed && <p role="alert" className="mt-3 text-sm text-rose-600">{o.sampleFailed}</p>}
+      {sampleFailed && <p role="alert" className="mt-3 text-sm text-rose-600 dark:text-rose-400">{o.sampleFailed}</p>}
     </section>
   );
 }

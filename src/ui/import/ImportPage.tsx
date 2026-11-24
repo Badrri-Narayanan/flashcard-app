@@ -89,7 +89,7 @@ export default function ImportPage() {
       </button>
       <p className="text-sm text-slate-600 dark:text-slate-400">{strings.importPage.dropHint}</p>
       {message && (
-        <p role="alert" className="text-sm text-rose-600">
+        <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
           {message}
         </p>
       )}

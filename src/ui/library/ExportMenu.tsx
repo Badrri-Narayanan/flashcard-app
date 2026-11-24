@@ -61,7 +61,7 @@ export function ExportDialog({ scope, id, onClose }: DialogProps) {
           </>
         )}
         {error && (
-          <p role="alert" className="text-sm text-rose-600">
+          <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
             {strings.export.failed}
           </p>
         )}

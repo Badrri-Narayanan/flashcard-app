@@ -75,7 +75,7 @@ export default function DeckSettingsDialog({ deck, onClose }: Props) {
         className={fieldClass}
       />
       {submitted && !valid && (
-        <p id={`${id}-err`} role="alert" className="mt-1 text-sm text-rose-600">{strings.deckSettings.invalidLimit}</p>
+        <p id={`${id}-err`} role="alert" className="mt-1 text-sm text-rose-600 dark:text-rose-400">{strings.deckSettings.invalidLimit}</p>
       )}
     </div>
   );
@@ -104,7 +104,7 @@ export default function DeckSettingsDialog({ deck, onClose }: Props) {
         </label>
         {langSelect(strings.deckSettings.langFront, langFront, setLangFront)}
         {langSelect(strings.deckSettings.langBack, langBack, setLangBack)}
-        {saveError && <p role="alert" className="text-sm text-rose-600">{strings.deckSettings.saveFailed}</p>}
+        {saveError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{strings.deckSettings.saveFailed}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="min-h-11 rounded-lg border border-slate-300 px-4 font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
             {strings.common.cancel}

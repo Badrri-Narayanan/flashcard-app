@@ -216,7 +216,7 @@ function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) 
           />
         </label>
         {fileError && (
-          <p role="alert" className="text-sm text-rose-600">
+          <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
             {fileError}
           </p>
         )}
@@ -245,7 +245,7 @@ function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) 
               />
             </label>
             {nameError && (
-              <p id={nameErrorId} role="alert" className="text-sm text-rose-600">
+              <p id={nameErrorId} role="alert" className="text-sm text-rose-600 dark:text-rose-400">
                 {strings.csv.nameRequired}
               </p>
             )}
@@ -305,7 +305,7 @@ function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) 
           </>
         )}
         {saveError && (
-          <p role="alert" className="text-sm text-rose-600">
+          <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
             {saveError}
           </p>
         )}

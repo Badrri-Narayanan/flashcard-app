@@ -122,9 +122,9 @@ export default function CardEditor() {
       </div>
 
       <div aria-live="polite">
-        {ed.errors.map((m) => <p key={m} role="alert" className="text-sm text-rose-600">{m}</p>)}
-        {ed.saveError && <p role="alert" className="text-sm text-rose-600">{strings.editor.saveFailed}</p>}
-        {ed.imageError && <p role="alert" className="text-sm text-rose-600">{strings.editor.imageFailed}</p>}
+        {ed.errors.map((m) => <p key={m} role="alert" className="text-sm text-rose-600 dark:text-rose-400">{m}</p>)}
+        {ed.saveError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{strings.editor.saveFailed}</p>}
+        {ed.imageError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{strings.editor.imageFailed}</p>}
         {ed.saved && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">{strings.editor.saved}</p>}
       </div>
 

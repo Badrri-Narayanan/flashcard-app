@@ -68,7 +68,7 @@ export default function EntityDialog({ title, initial, defaultEmoji, onSubmit, o
           />
         </label>
         {error && (
-          <p id={errorId} role="alert" className="text-sm text-rose-600">
+          <p id={errorId} role="alert" className="text-sm text-rose-600 dark:text-rose-400">
             {strings.dialog.nameRequired}
           </p>
         )}
@@ -98,7 +98,7 @@ export default function EntityDialog({ title, initial, defaultEmoji, onSubmit, o
           </div>
         </div>
         {saveError && (
-          <p role="alert" className="text-sm text-rose-600">
+          <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
             {strings.dialog.saveFailed}
           </p>
         )}

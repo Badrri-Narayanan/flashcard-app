@@ -109,7 +109,7 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
                 className="min-h-12 w-full rounded-xl bg-accent-600 font-medium text-white hover:bg-accent-700"
               >
                 {strings.study.show}
-                {hints && <kbd aria-hidden className="ms-2 rounded bg-white/20 px-1.5 text-xs">Space</kbd>}
+                {hints && <kbd aria-hidden className="ms-2 rounded bg-black/25 px-1.5 text-xs">Space</kbd>}
               </button>
             </>
           )}

@@ -111,7 +111,7 @@ export default function JsonImportDialog({ onClose, initialFile }: Props) {
             />
           </label>
           {error && (
-            <p role="alert" className="text-sm text-rose-600">
+            <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
               {error}
             </p>
           )}

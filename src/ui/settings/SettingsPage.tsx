@@ -136,7 +136,7 @@ function ResetDialog({ onClose }: { onClose: () => void }) {
           {t.resetPrompt}
           <input value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" className={fieldClass} />
         </label>
-        {error && <p role="alert" className="text-sm text-rose-600">{t.resetFailed}</p>}
+        {error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{t.resetFailed}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className={buttonClass}>{strings.common.cancel}</button>
           <button
@@ -246,7 +246,7 @@ export default function SettingsPage() {
             }}
             className={fieldClass}
           />
-          {!goalValid && <p id={`${goalId}-err`} role="alert" className="mt-1 text-sm text-rose-600">{t.dailyGoalInvalid}</p>}
+          {!goalValid && <p id={`${goalId}-err`} role="alert" className="mt-1 text-sm text-rose-600 dark:text-rose-400">{t.dailyGoalInvalid}</p>}
         </div>
         <label className="block text-sm font-medium">
           {t.dayStartHour}
@@ -286,9 +286,9 @@ export default function SettingsPage() {
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => void exportLibrary()} className={buttonClass}>{t.exportLibrary}</button>
           <Link to="/import" className={buttonClass}>{t.import}</Link>
-          <button type="button" onClick={() => setResetting(true)} className={`${buttonClass} text-rose-600`}>{t.reset}</button>
+          <button type="button" onClick={() => setResetting(true)} className={`${buttonClass} text-rose-600 dark:text-rose-400`}>{t.reset}</button>
         </div>
-        {exportError && <p role="alert" className="text-sm text-rose-600">{t.exportFailed}</p>}
+        {exportError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{t.exportFailed}</p>}
       </Section>
 
       <Section title={t.about}>
