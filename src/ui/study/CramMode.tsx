@@ -84,7 +84,7 @@ export default function CramMode({ deckIds, backTo }: Props) {
               {c.again}
               {hints && <kbd aria-hidden className="ms-2 rounded bg-black/25 px-1.5 text-xs">1</kbd>}
             </button>
-            <button type="button" onClick={() => mark(true)} className="min-h-14 rounded-xl bg-emerald-600 font-semibold text-white hover:bg-emerald-700">
+            <button type="button" onClick={() => mark(true)} className="min-h-14 rounded-xl bg-emerald-700 font-semibold text-white hover:bg-emerald-800">
               {c.gotIt}
               {hints && <kbd aria-hidden className="ms-2 rounded bg-black/25 px-1.5 text-xs">3</kbd>}
             </button>

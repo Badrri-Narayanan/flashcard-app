@@ -137,7 +137,7 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
           data-testid="swipe-overlay"
           style={{ opacity: progress * 0.6 }}
           className={`pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl text-3xl font-bold text-white ${
-            good ? 'bg-emerald-500' : 'bg-rose-500'
+            good ? 'bg-emerald-700' : 'bg-rose-700'
           }`}
         >
           {good ? strings.study.swipeGood : strings.study.swipeAgain}

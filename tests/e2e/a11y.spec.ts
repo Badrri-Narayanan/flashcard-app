@@ -50,6 +50,32 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoSeriousViolations(page);
     });
 
+    async function openStudyMode(page: Page, mode: 'cram' | 'quiz') {
+      await page.goto('/#/');
+      await page.getByRole('link', { name: /Sample/ }).first().click();
+      await page.getByRole('link', { name: /JavaScript/ }).click();
+      await expect(page).toHaveURL(/#\/deck\//);
+      const deckId = new URL(page.url()).hash.split('/')[2];
+      await page.goto(`/#/study/deck/${deckId}/${mode}`);
+    }
+
+    test('cram study screen has no serious or critical axe violations', async ({ page }) => {
+      await openStudyMode(page, 'cram');
+      await page.getByRole('region', { name: 'Card' }).click();
+      await expect(page.getByRole('button', { name: /Got it/ })).toBeVisible();
+      await expectNoSeriousViolations(page);
+    });
+
+    test('quiz study screen has no serious or critical axe violations', async ({ page }) => {
+      await openStudyMode(page, 'quiz');
+      const options = page.getByRole('group', { name: 'Answer options' }).or(page.getByRole('radiogroup', { name: 'Answer options' }));
+      await expect(options.first()).toBeVisible();
+      await expectNoSeriousViolations(page);
+      await options.first().getByRole('button').or(options.first().getByRole('radio')).first().click();
+      await expect(page.getByRole('button', { name: /Next question|See results/ })).toBeVisible();
+      await expectNoSeriousViolations(page);
+    });
+
     test('settings has no serious or critical axe violations', async ({ page }) => {
       await page.goto('/#/settings');
       await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();

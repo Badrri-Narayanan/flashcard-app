@@ -52,9 +52,16 @@ samp {
 }
 
 .card-content pre {
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   border-radius: 0.5rem;
   padding: 0.75rem;
+}
+
+.card-content pre code.hljs {
+  padding: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .card-content th,
@@ -67,33 +74,36 @@ samp {
   background: #0f172a;
   color: #e2e8f0;
 }
-.dark .hljs-comment,
-.dark .hljs-quote {
+.dark .hljs .hljs-subst {
+  color: #e2e8f0;
+}
+.dark .hljs .hljs-comment,
+.dark .hljs .hljs-quote {
   color: #94a3b8;
 }
-.dark .hljs-keyword,
-.dark .hljs-selector-tag,
-.dark .hljs-doctag {
+.dark .hljs .hljs-keyword,
+.dark .hljs .hljs-selector-tag,
+.dark .hljs .hljs-doctag {
   color: #f472b6;
 }
-.dark .hljs-string,
-.dark .hljs-regexp,
-.dark .hljs-addition {
+.dark .hljs .hljs-string,
+.dark .hljs .hljs-regexp,
+.dark .hljs .hljs-addition {
   color: #86efac;
 }
-.dark .hljs-number,
-.dark .hljs-literal,
-.dark .hljs-attr,
-.dark .hljs-variable {
+.dark .hljs .hljs-number,
+.dark .hljs .hljs-literal,
+.dark .hljs .hljs-attr,
+.dark .hljs .hljs-variable {
   color: #fcd34d;
 }
-.dark .hljs-title,
-.dark .hljs-section,
-.dark .hljs-built_in,
-.dark .hljs-type {
+.dark .hljs .hljs-title,
+.dark .hljs .hljs-section,
+.dark .hljs .hljs-built_in,
+.dark .hljs .hljs-type {
   color: #93c5fd;
 }
-.dark .hljs-deletion {
+.dark .hljs .hljs-deletion {
   color: #fca5a5;
 }
 
