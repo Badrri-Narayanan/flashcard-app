@@ -10,6 +10,7 @@ import { UNDO_TOAST_MS } from '../components/toastTiming';
 import { strings } from '../strings';
 import ShareDialog from '../share/ShareDialog';
 import ExportMenu from '../library/ExportMenu';
+import DeckSettingsDialog from '../library/DeckSettingsDialog';
 import { plainPreview } from './editorLogic';
 
 interface Toast {
@@ -35,6 +36,7 @@ export default function DeckPage() {
   const [tag, setTag] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [sharing, setSharing] = useState(false);
+  const [editingSettings, setEditingSettings] = useState(false);
 
   const index = useMemo(() => new SearchIndex(cards), [cards]);
   const tags = useMemo(() => [...new Set(cards.flatMap((c) => c.tags))].sort((a, b) => a.localeCompare(b)), [cards]);
@@ -105,6 +107,7 @@ export default function DeckPage() {
             )}
             <ExportMenu scope="deck" id={id} />
             <button type="button" onClick={() => setSharing(true)} className={secondary}>{strings.deck.share}</button>
+            <button type="button" onClick={() => setEditingSettings(true)} className={secondary}>{strings.deck.settings}</button>
             <Link to={addHref} className={primary}>{strings.deck.addCard}</Link>
           </div>
         </div>
@@ -186,6 +189,7 @@ export default function DeckPage() {
           })}
         </ul>
       )}
+      {editingSettings && <DeckSettingsDialog deck={deck} onClose={() => setEditingSettings(false)} />}
       {sharing && <ShareDialog deck={deck} onClose={() => setSharing(false)} />}
       <ToastRegion toasts={toasts} onClose={dismiss} />
     </div>

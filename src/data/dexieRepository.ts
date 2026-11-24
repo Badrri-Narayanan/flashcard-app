@@ -420,6 +420,14 @@ export class DexieRepository implements Repository {
     });
   }
 
+  resetAll(): Promise<void> {
+    return this.write(() =>
+      this.db.transaction('rw', this.db.tables, async () => {
+        for (const table of this.db.tables) await table.clear();
+      }),
+    );
+  }
+
   transaction<T>(fn: () => Promise<T>): Promise<T> {
     return this.write(() => this.db.transaction('rw', this.db.tables, fn));
   }

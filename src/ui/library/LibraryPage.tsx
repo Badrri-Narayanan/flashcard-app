@@ -8,6 +8,7 @@ import { useLibrary } from '../hooks/useLibrary';
 import { useLibraryActions, type MoveTarget } from '../hooks/useLibraryActions';
 import { strings } from '../strings';
 import DeckDialog from './DeckDialog';
+import DeckSettingsDialog from './DeckSettingsDialog';
 import FolderDialog from './FolderDialog';
 import LibrarySearch from './LibrarySearch';
 import MovePicker from './MovePicker';
@@ -22,6 +23,7 @@ type DialogState =
   | { type: 'deck'; deck?: Deck }
   | { type: 'move'; node: TreeNode }
   | { type: 'share'; deck: Deck }
+  | { type: 'deckSettings'; deck: Deck }
   | { type: 'export'; node: TreeNode }
   | null;
 
@@ -69,6 +71,9 @@ export default function LibraryPage() {
     else if (action === 'share') {
       const deck = decks.find((d) => d.id === node.id);
       if (deck) setDialog({ type: 'share', deck });
+    } else if (action === 'settings') {
+      const deck = decks.find((d) => d.id === node.id);
+      if (deck) setDialog({ type: 'deckSettings', deck });
     } else if (action === 'export') setDialog({ type: 'export', node });
     else if (action === 'move') setDialog({ type: 'move', node });
     else if (node.kind === 'folder') setDialog({ type: 'folder', folder: folders.find((f) => f.id === node.id) });
@@ -149,6 +154,7 @@ export default function LibraryPage() {
         />
       )}
       {dialog?.type === 'export' && <ExportDialog scope={dialog.node.kind} id={dialog.node.id} onClose={closeDialog} />}
+      {dialog?.type === 'deckSettings' && <DeckSettingsDialog deck={dialog.deck} onClose={closeDialog} />}
       {dialog?.type === 'share' && <ShareDialog deck={dialog.deck} onClose={closeDialog} />}
       <ToastRegion toasts={actions.toasts} onClose={actions.dismissToast} />
     </div>

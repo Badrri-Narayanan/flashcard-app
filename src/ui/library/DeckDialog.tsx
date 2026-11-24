@@ -1,6 +1,7 @@
 import { repo } from '../../data/repo';
+import { newDeckSettings } from '../settings/newDeckSettings';
 import { baseRecord } from '../../domain/ids';
-import { DEFAULT_DECK_SETTINGS, type Deck, type Id } from '../../domain/types';
+import { type Deck, type Id } from '../../domain/types';
 import { strings } from '../strings';
 import EntityDialog from './EntityDialog';
 
@@ -17,7 +18,7 @@ export default function DeckDialog({ deck, folderId, onClose }: Props) {
       initial={deck ?? {}}
       defaultEmoji="📚"
       onClose={onClose}
-      onSubmit={(v) =>
+      onSubmit={async (v) =>
         repo.saveDeck(
           deck
             ? { ...deck, ...v, updatedAt: Date.now() }
@@ -25,7 +26,7 @@ export default function DeckDialog({ deck, folderId, onClose }: Props) {
                 ...baseRecord(),
                 folderId,
                 order: 0,
-                settings: { ...DEFAULT_DECK_SETTINGS },
+                settings: await newDeckSettings(),
                 sourceId: null,
                 matchBestMs: null,
                 ...v,

@@ -77,5 +77,8 @@ export interface Repository {
   getKV<T>(key: string): Promise<T | undefined>;
   setKV(key: string, value: unknown): Promise<void>;
 
+  /** Deletes every record in every table, settings included, in one transaction. */
+  resetAll(): Promise<void>;
+
   transaction<T>(fn: () => Promise<T>): Promise<T>;
 }

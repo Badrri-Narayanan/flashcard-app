@@ -321,3 +321,19 @@ describe('DexieRepository', () => {
     expect((await repo.listLogsForCard(a.id, 2)).map((l) => l.at)).toEqual([300, 200]);
   });
 });
+
+describe('resetAll', () => {
+  it('clears every table including kv in one go', async () => {
+    const deck = mkDeck();
+    await repo.saveDeck(deck);
+    await repo.saveCard(mkCard(deck.id));
+    await repo.saveFolder(mkFolder());
+    await repo.setKV('settings', { theme: 'dark' });
+    await repo.resetAll();
+    expect(await repo.listDecks()).toEqual([]);
+    expect(await repo.listFolders()).toEqual([]);
+    expect(await repo.listAllCards()).toEqual([]);
+    expect(await db.reviewItems.count()).toBe(0);
+    expect(await repo.getKV('settings')).toBeUndefined();
+  });
+});

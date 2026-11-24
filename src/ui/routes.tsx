@@ -10,6 +10,7 @@ import ImportPage from './import/ImportPage';
 import StatsPage from './stats/StatsPage';
 import SharePreviewPage from './share/SharePreviewPage';
 import PrintPage from './print/PrintPage';
+import SettingsPage from './settings/SettingsPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 
 /** Later tasks add their routes here, before the catch-all. */
@@ -28,6 +29,7 @@ export const routes: RouteObject[] = [
       { path: '/import', element: <ImportPage /> },
       { path: '/stats', element: <StatsPage /> },
       { path: '/share/*', element: <SharePreviewPage /> },
+      { path: '/settings', element: <SettingsPage /> },
       { path: '*', element: <ComingSoonPage /> },
     ],
   },

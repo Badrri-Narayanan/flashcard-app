@@ -2,9 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { repo } from '../../data/repo';
+import { newDeckSettings } from '../settings/newDeckSettings';
 import { detectSeparators, parseBulk, type CardSep, type TermSep } from '../../domain/bulkPaste';
 import { baseRecord } from '../../domain/ids';
-import { DEFAULT_DECK_SETTINGS, type Card, type Deck, type Id } from '../../domain/types';
+import { type Card, type Deck, type Id } from '../../domain/types';
 import Dialog from '../components/Dialog';
 import { UNDO_TOAST_MS } from '../components/toastTiming';
 import { strings } from '../strings';
@@ -141,7 +142,7 @@ function BulkPasteForm({ decks, deckId, initialText, onClose, onCreated }: FormP
             color: '',
             emoji: '📚',
             order: 0,
-            settings: { ...DEFAULT_DECK_SETTINGS },
+            settings: await newDeckSettings(),
             sourceId: null,
             matchBestMs: null,
           });

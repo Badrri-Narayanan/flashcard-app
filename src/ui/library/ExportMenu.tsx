@@ -1,15 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { exportBackup } from '../../data/backupIO';
 import { repo } from '../../data/repo';
 import type { BackupScope } from '../../domain/backup';
-import { cardsToCsv } from '../../domain/csv';
-import { exportFilename } from '../../domain/exportName';
 import type { Deck, Id } from '../../domain/types';
 import Dialog from '../components/Dialog';
 import ShareDialog from '../share/ShareDialog';
 import { strings } from '../strings';
-import { downloadBlob } from './download';
+import { runExport } from './runExport';
 
 interface Props {
   scope: BackupScope;
@@ -20,15 +17,8 @@ interface DialogProps extends Props {
   onClose: () => void;
 }
 
-const CSV_BOM = '\uFEFF';
 const item =
   'flex min-h-11 w-full items-center rounded-lg border border-slate-300 bg-white px-4 font-medium hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800';
-
-async function nameFor(scope: BackupScope, id: Id | null): Promise<{ name: string; fallback: string }> {
-  if (scope === 'library') return { name: '', fallback: 'library' };
-  if (scope === 'deck') return { name: (id && (await repo.getDeck(id))?.name) || '', fallback: 'deck' };
-  return { name: (await repo.listFolders()).find((f) => f.id === id)?.name ?? '', fallback: 'folder' };
-}
 
 /** The export choices for one scope; used directly by row menus and wrapped by {@link ExportMenu}. */
 export function ExportDialog({ scope, id, onClose }: DialogProps) {
@@ -39,13 +29,7 @@ export function ExportDialog({ scope, id, onClose }: DialogProps) {
   async function run(kind: 'json' | 'csv') {
     setError(false);
     try {
-      const { name, fallback } = await nameFor(scope, id);
-      if (kind === 'json') {
-        downloadBlob(await exportBackup(scope, id, { includeHistory: history }), exportFilename(name, fallback, 'json'));
-      } else {
-        const csv = cardsToCsv(await repo.listCards(id ?? ''));
-        downloadBlob(new Blob([CSV_BOM, csv], { type: 'text/csv;charset=utf-8' }), exportFilename(name, fallback, 'csv'));
-      }
+      await runExport(scope, id, kind, history);
     } catch (err) {
       console.error('Failed to export', err);
       setError(true);

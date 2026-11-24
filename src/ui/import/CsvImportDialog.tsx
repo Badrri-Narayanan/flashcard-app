@@ -2,10 +2,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { repo } from '../../data/repo';
+import { newDeckSettings } from '../settings/newDeckSettings';
 import { StorageFullError } from '../../data/repository';
 import { guessMapping, isImportable, parseCsv, rowsToDrafts, type CsvField } from '../../domain/csv';
 import { baseRecord } from '../../domain/ids';
-import { DEFAULT_DECK_SETTINGS, type Card, type Deck, type Id } from '../../domain/types';
+import { type Card, type Deck, type Id } from '../../domain/types';
 import Dialog from '../components/Dialog';
 import { UNDO_TOAST_MS } from '../components/toastTiming';
 import { DEFAULT_COLOR } from '../library/palette';
@@ -165,7 +166,7 @@ function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) 
             color: DEFAULT_COLOR,
             emoji: '📚',
             order: 0,
-            settings: { ...DEFAULT_DECK_SETTINGS },
+            settings: await newDeckSettings(),
             sourceId: null,
             matchBestMs: null,
           });
