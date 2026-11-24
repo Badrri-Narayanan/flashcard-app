@@ -175,7 +175,7 @@ export default function SettingsPage() {
   async function exportLibrary() {
     setExportError(false);
     try {
-      await runExport('library', null, 'json', false);
+      await runExport('library', null, 'json', true);
     } catch (err) {
       console.error('Failed to export', err);
       setExportError(true);

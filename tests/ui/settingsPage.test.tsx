@@ -137,7 +137,7 @@ describe('SettingsPage', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const user = userEvent.setup();
     renderPage();
-    await runExport('library', null, 'json', false);
+    await runExport('library', null, 'json', true);
     const stamped = await getLastBackupAt();
     expect(stamped).toBeGreaterThan(0);
     await user.selectOptions(screen.getByLabelText('Theme'), 'dark');

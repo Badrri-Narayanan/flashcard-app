@@ -3,6 +3,7 @@ import { applyImport, exportBackup, getLastBackupAt, readBackupFile } from '../.
 import { db } from '../../src/data/db';
 import { repo } from '../../src/data/repo';
 import { planImport, validateBackup } from '../../src/domain/backup';
+import { runExport } from '../../src/ui/library/runExport';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
 import type { Card, Deck, Folder, Media, ReviewItem, ReviewLog } from '../../src/domain/types';
@@ -116,6 +117,25 @@ describe('backupIO', () => {
     expect(await blobBytes(imported[0].blob)).toEqual([1, 2, 3, 255]);
   });
 
+  it('the shared library backup (runExport) survives export → reset → import with history', async () => {
+    const s = await seed();
+    let saved: Blob | null = null;
+    URL.createObjectURL = (b: Blob | MediaSource) => {
+      saved = b as Blob;
+      return 'blob:x';
+    };
+    URL.revokeObjectURL = () => undefined;
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    await runExport('library', null, 'json', true);
+    expect(await getLastBackupAt()).toBeGreaterThan(0);
+    await db.delete();
+    await db.open();
+    const file = await readBackupFile(asFile(await text(saved!)));
+    await applyImport(planImport(file, await existingMeta(), 'update', null));
+    expect(await db.reviewItems.toArray()).toEqual([s.item]);
+    expect(await db.reviewLogs.toArray()).toEqual([s.log]);
+  });
+
   it('update mode keeps local newer card', async () => {
     const s = await seed();
     const blob = await exportBackup('library', null, { includeHistory: true });
@@ -197,10 +217,12 @@ describe('backupIO', () => {
     expect(f.scope).toBe('folder');
   });
 
-  it('library export stamps its own lastBackupAt key and leaves settings untouched', async () => {
+  it('library export with history stamps its own lastBackupAt key and leaves settings untouched', async () => {
     await repo.setKV('settings', { theme: 'dark' });
     expect(await getLastBackupAt()).toBeNull();
     await exportBackup('library', null, { includeHistory: false });
+    expect(await getLastBackupAt()).toBeNull();
+    await exportBackup('library', null, { includeHistory: true });
     expect(await getLastBackupAt()).toBeGreaterThan(0);
     expect(await repo.getKV('settings')).toEqual({ theme: 'dark' });
   });

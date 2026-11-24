@@ -133,7 +133,7 @@ export async function exportBackup(scope: BackupScope, id: Id | null, opts: { in
   parts.push(']}');
 
   const blob = new Blob(parts, { type: 'application/json' });
-  if (scope === 'library') await stampLibraryBackup(exportedAt);
+  if (scope === 'library' && opts.includeHistory) await stampLibraryBackup(exportedAt);
   return blob;
 }
 

@@ -44,7 +44,7 @@ export default function BackupReminder() {
   async function backUp() {
     setFailed(false);
     try {
-      await runExport('library', null, 'json', false);
+      await runExport('library', null, 'json', true);
       setCards(null);
     } catch (err) {
       console.error('Backup from reminder failed', err);

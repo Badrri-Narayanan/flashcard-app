@@ -22,7 +22,7 @@ const item =
 
 /** The export choices for one scope; used directly by row menus and wrapped by {@link ExportMenu}. */
 export function ExportDialog({ scope, id, onClose }: DialogProps) {
-  const [history, setHistory] = useState(false);
+  const [history, setHistory] = useState(scope === 'library');
   const [error, setError] = useState(false);
   const [sharing, setSharing] = useState<Deck | null>(null);
 

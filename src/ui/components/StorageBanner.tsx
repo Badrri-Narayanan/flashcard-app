@@ -12,7 +12,7 @@ export default function StorageBanner() {
   async function exportNow() {
     setExportFailed(false);
     try {
-      await runExport('library', null, 'json', false);
+      await runExport('library', null, 'json', true);
     } catch (err) {
       console.error('Backup from storage banner failed', err);
       setExportFailed(true);

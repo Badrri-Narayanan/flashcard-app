@@ -117,7 +117,7 @@ describe('StorageBanner', () => {
     renderBanner(new StorageFullError());
     await user.click(screen.getByRole('button', { name: 'report' }));
     await user.click(await screen.findByRole('button', { name: 'Export backup' }));
-    expect(runExport).toHaveBeenCalledWith('library', null, 'json', false);
+    expect(runExport).toHaveBeenCalledWith('library', null, 'json', true);
 
     runExport.mockRejectedValueOnce(new Error('nope'));
     await user.click(screen.getByRole('button', { name: 'Export backup' }));
@@ -195,7 +195,7 @@ describe('BackupReminder', () => {
     await seedCards(50);
     render(<BackupReminder />);
     await user.click(await screen.findByRole('button', { name: 'Back up now' }));
-    expect(runExport).toHaveBeenCalledWith('library', null, 'json', false);
+    expect(runExport).toHaveBeenCalledWith('library', null, 'json', true);
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
   });
 });

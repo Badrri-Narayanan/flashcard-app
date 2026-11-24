@@ -68,8 +68,24 @@ describe('export menu', () => {
     await user.click(await screen.findByRole('button', { name: 'Export…' }));
     expect(screen.getByRole('button', { name: 'Download JSON backup' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Download CSV' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('checkbox', { name: 'Include study history' }));
     await user.click(screen.getByRole('button', { name: 'Download JSON backup' }));
     await waitFor(() => expect(clicked[0]).toMatch(/^flashcards-library-\d{4}-\d{2}-\d{2}\.json$/));
+  });
+
+  it('a library backup includes study history by default; a deck export leaves it off', async () => {
+    await repo.saveDeck(deck);
+    await repo.saveCards([card]);
+    render(<SettingsContext.Provider value={[DEFAULT_SETTINGS, () => undefined]}><RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/'] })} /></SettingsContext.Provider>);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Export…' }));
+    expect(screen.getByRole('checkbox', { name: 'Include study history' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Download JSON backup' }));
+    await waitFor(() => expect(blobs).toHaveLength(1));
+    const json = JSON.parse(await new Promise<string>((resolve) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.readAsText(blobs[0]); })) as { reviewItems?: unknown[] };
+    expect(json.reviewItems).toHaveLength(1);
+    cleanup();
+    render(<SettingsContext.Provider value={[DEFAULT_SETTINGS, () => undefined]}><RouterProvider router={createMemoryRouter(routes, { initialEntries: [`/deck/${deck.id}`] })} /></SettingsContext.Provider>);
+    await user.click(await screen.findByRole('button', { name: 'Export…' }));
+    expect(screen.getByRole('checkbox', { name: 'Include study history' })).not.toBeChecked();
   });
 });
