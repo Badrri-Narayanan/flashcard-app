@@ -73,3 +73,23 @@ describe('csv', () => {
     expect(drafts[1]).toMatchObject({ front: 'plain', back: 'ans', tags: [], distractors: [] });
   });
 });
+
+describe('csv export safety and escaping', () => {
+  it('neutralises spreadsheet formulas on export and restores the text on import', () => {
+    const card = mkCard({ front: '=HYPERLINK("http://evil")', back: '+1', mnemonic: '@me', distractors: ['-5', 'ok'], type: 'mcq' });
+    const csv = cardsToCsv([card]);
+    const [row] = parseCsv(csv).rows;
+    expect(row[0].startsWith("'=")).toBe(true);
+    expect(row[1]).toBe("'+1");
+    expect(row[4]).toBe("'@me");
+    const drafts = rowsToDrafts(parseCsv(csv).rows, guessMapping(parseCsv(csv).headers, 6));
+    expect(drafts[0]).toMatchObject({ front: card.front, back: '+1', mnemonic: '@me', distractors: ['-5', 'ok'] });
+  });
+
+  it('round-trips tags with spaces or semicolons and distractors containing |', () => {
+    const card = mkCard({ tags: ['two words', 'a;b', 'plain'], distractors: ['x|y', 'z'], type: 'mcq' });
+    const parsed = parseCsv(cardsToCsv([card]));
+    const [draft] = rowsToDrafts(parsed.rows, guessMapping(parsed.headers, 6));
+    expect(draft).toMatchObject({ tags: ['two words', 'a;b', 'plain'], distractors: ['x|y', 'z'] });
+  });
+});

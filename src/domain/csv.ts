@@ -66,17 +66,43 @@ export function guessMapping(headers: string[] | null, columnCount: number): Csv
   return mapping;
 }
 
+/** Cells our export prefixed with ' so spreadsheets don't run them as formulas. */
+const ESCAPED_FORMULA = /^'(?=[=+\-@\t\r])/;
+/**
+ * Splits on separator characters that are not escaped with a backslash, dropping that escaping backslash.
+ * (Written by hand: regex lookbehind is missing from older iOS Safari.)
+ */
+function splitUnescaped(value: string, isSeparator: (ch: string) => boolean): string[] {
+  const parts: string[] = [];
+  let part = '';
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    const next = value[i + 1];
+    if (ch === '\\' && next !== undefined && isSeparator(next)) {
+      part += next;
+      i++;
+    } else if (isSeparator(ch)) {
+      parts.push(part);
+      part = '';
+    } else part += ch;
+  }
+  parts.push(part);
+  return parts.map((p) => p.trim()).filter(Boolean);
+}
+const isTagSeparator = (ch: string) => ch === ';' || /\s/.test(ch);
+const isDistractorSeparator = (ch: string) => ch === '|';
+
 export function rowsToDrafts(rows: string[][], mapping: CsvField[]): Partial<Card>[] {
   return rows.map((row) => {
     const draft: Partial<Card> = { front: '', back: '', type: 'basic', tags: [], distractors: [], mnemonic: '' };
     mapping.forEach((field, i) => {
-      const value = (row[i] ?? '').trim();
+      const value = (row[i] ?? '').trim().replace(ESCAPED_FORMULA, '');
       switch (field) {
         case 'front': draft.front = value; break;
         case 'back': draft.back = value; break;
         case 'mnemonic': draft.mnemonic = value; break;
-        case 'tags': draft.tags = value.split(/[;\s]+/).filter(Boolean); break;
-        case 'distractors': draft.distractors = value.split('|').map((s) => s.trim()).filter(Boolean); break;
+        case 'tags': draft.tags = splitUnescaped(value, isTagSeparator); break;
+        case 'distractors': draft.distractors = splitUnescaped(value, isDistractorSeparator); break;
         case 'type': {
           const t = value.toLowerCase() as Card['type'];
           draft.type = CARD_TYPES.includes(t) ? t : 'basic';
@@ -94,7 +120,13 @@ export function isImportable(d: Partial<Card>): boolean {
   return !!d.front && (d.type === 'cloze' || !!d.back);
 }
 
+const escapeTag = (t: string) => t.replace(/[;\s]/g, (ch) => `\\${ch}`);
+const escapeDistractor = (d: string) => d.replace(/\|/g, '\\|');
+
+/** Cells starting with = + - @ get a leading ' (Papa's escapeFormulae) so spreadsheets show them as text. */
 export function cardsToCsv(cards: Card[]): string {
-  const rows = cards.map((c) => [c.front, c.back, c.tags.join(' '), c.type, c.mnemonic, c.distractors.join('|')]);
-  return Papa.unparse([CSV_COLUMNS, ...rows], { newline: '\n' });
+  const rows = cards.map((c) => [
+    c.front, c.back, c.tags.map(escapeTag).join(' '), c.type, c.mnemonic, c.distractors.map(escapeDistractor).join('|'),
+  ]);
+  return Papa.unparse([CSV_COLUMNS, ...rows], { newline: '\n', escapeFormulae: true });
 }
