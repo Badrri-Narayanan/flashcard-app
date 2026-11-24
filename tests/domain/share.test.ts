@@ -79,6 +79,13 @@ describe('share payloads', () => {
     expect(decodeShare(encodeShare({ ...payload, deck: { ...payload.deck, updatedAt: 'x' } } as never))).toEqual({ ok: false, reason: 'invalid' });
   });
 
+  it('rejects a link whose decompressed text would exceed the cap', () => {
+    const d = deck();
+    const encoded = encodeShare(buildSharePayload(d, [card(d.id, { front: 'x'.repeat(50_000) })], () => undefined).payload);
+    expect(decodeShare(encoded, 10_000)).toEqual({ ok: false, reason: 'invalid' });
+    expect(decodeShare(encoded).ok).toBe(true);
+  });
+
   it('buildSharePayload drops images over budget and reports count', () => {
     const d = deck();
     const cards = [card(d.id, { front: '![](media:m1)' }), card(d.id, { front: '![](media:m2)' }), card(d.id, { front: '![](media:m1)' })];

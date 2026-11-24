@@ -1,11 +1,14 @@
-import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
+import { compressToEncodedURIComponent } from 'lz-string';
 import { SCHEMA_VERSION, type BackupFile, type BackupMedia } from './backup';
+import { decompressUriCapped } from './lzDecompress';
 import { isObject, parseAll, parseBackupMedia, parseCardContent, parseDeckSettings } from './records';
 import type { Card, Deck, Id } from './types';
 
 export const SHARE_URL_WARN = 8_000;
 export const SHARE_URL_MAX = 2_000_000;
 export const SHARE_QR_MAX = 2_900;
+/** Largest decompressed payload accepted from a link (characters); bounds memory for hostile links. */
+export const SHARE_DECODED_MAX = 32_000_000;
 const DEFAULT_BUDGET = 1_500_000;
 const MEDIA_REF = /media:([\w-]+)/g;
 
@@ -48,10 +51,10 @@ function parsePayload(v: unknown): { payload: SharePayload; skipped: number } | 
   return { payload: { v: 1, deck, cards: cards.ok, media: media.ok }, skipped: cards.invalid + media.invalid };
 }
 
-export function decodeShare(s: string): DecodeResult {
+export function decodeShare(s: string, maxChars = SHARE_DECODED_MAX): DecodeResult {
   let text: string | null;
   try {
-    text = s ? decompressFromEncodedURIComponent(s) : null;
+    text = s ? decompressUriCapped(s, maxChars) : null;
   } catch {
     text = null;
   }
