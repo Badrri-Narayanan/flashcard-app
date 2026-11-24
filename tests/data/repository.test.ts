@@ -289,4 +289,18 @@ describe('DexieRepository', () => {
     expect((await repo.listLogs()).map((l) => l.id)).not.toContain(early.id);
     expect(await repo.getFirstLearnLogTimes([])).toEqual(new Map());
   });
+
+  it('saveReviewItems writes items without logging or touching other fields', async () => {
+    const deck = mkDeck();
+    await repo.saveDeck(deck);
+    const card = mkCard(deck.id, { type: 'reversible' });
+    await repo.saveCard(card);
+    const items = await repo.getReviewItemsForCard(card.id);
+    expect(items).toHaveLength(2);
+    await repo.saveReviewItems(items.map((i) => ({ ...i, lapses: 7, stability: 3 })));
+    await repo.saveReviewItems((await repo.getReviewItemsForCard(card.id)).map((i) => ({ ...i, lapses: 0 })));
+    const after = await repo.getReviewItemsForCard(card.id);
+    expect(after.every((i) => i.lapses === 0 && i.stability === 3)).toBe(true);
+    expect(await repo.listLogs()).toHaveLength(0);
+  });
 });

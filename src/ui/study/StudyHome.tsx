@@ -54,6 +54,9 @@ export default function StudyHome() {
           </Link>
         </div>
       )}
+      <Link to="/trouble" className={`${button} border border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800`}>
+        {strings.trouble.link}
+      </Link>
       {studyFolders.length > 0 && (
         <section aria-labelledby="study-folders" className="space-y-2">
           <h2 id="study-folders" className="text-lg font-semibold">{strings.study.foldersHeading}</h2>

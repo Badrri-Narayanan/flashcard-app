@@ -8,6 +8,7 @@ import { strings } from '../strings';
 import { EMPTY_FORM, insertAt, mergeTags, validate, wrapBlank, type EditorForm } from './editorLogic';
 
 export type Field = 'front' | 'back';
+export type FocusField = Field | 'mnemonic';
 export type LoadState = 'loading' | 'ready' | 'missing';
 
 const formOf = (c: Card): EditorForm => ({
@@ -37,6 +38,7 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
   const [saved, setSaved] = useState(false);
   const [confirmAdd, setConfirmAdd] = useState<boolean | null>(null);
   const refs = { front: useRef<HTMLTextAreaElement>(null), back: useRef<HTMLTextAreaElement>(null) };
+  const mnemonicRef = useRef<HTMLTextAreaElement>(null);
   const lastField = useRef<Field>('front');
   const loadedId = useRef<Id | undefined>(undefined);
   const caret = useRef<{ field: Field; pos: number } | null>(null);
@@ -172,6 +174,6 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
   return {
     tagDraft, setTagDraft, dirty, cancel, confirmDiscard, dismissDiscard: () => setConfirmDiscard(false),
     state, form, existing, errors, saveError, imageError, saving, saved, confirmAdd,
-    refs, lastField, patch, goBack, submit, confirmTypeChange, cancelTypeChange: () => setConfirmAdd(null), makeBlank, addImages,
+    refs, mnemonicRef, lastField, patch, goBack, submit, confirmTypeChange, cancelTypeChange: () => setConfirmAdd(null), makeBlank, addImages,
   };
 }

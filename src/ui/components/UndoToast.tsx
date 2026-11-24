@@ -5,11 +5,12 @@ import { UNDO_TOAST_MS } from './toastTiming';
 interface Props {
   message: string;
   onUndo?: () => void;
+  actionLabel?: string;
   onClose: () => void;
   durationMs?: number;
 }
 
-export default function UndoToast({ message, onUndo, onClose, durationMs = UNDO_TOAST_MS }: Props) {
+export default function UndoToast({ message, onUndo, actionLabel, onClose, durationMs = UNDO_TOAST_MS }: Props) {
   const closeRef = useRef(onClose);
   useEffect(() => {
     closeRef.current = onClose;
@@ -31,7 +32,7 @@ export default function UndoToast({ message, onUndo, onClose, durationMs = UNDO_
           }}
           className="min-h-11 rounded-lg px-3 font-semibold text-accent-500 hover:underline"
         >
-          {strings.common.undo}
+          {actionLabel ?? strings.common.undo}
         </button>
       )}
     </div>

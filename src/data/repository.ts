@@ -52,6 +52,8 @@ export interface Repository {
   getNewItems(deckIds: Id[], limit: number): Promise<ReviewItem[]>;
   countDue(deckId: Id, until: number): Promise<{ due: number; new: number }>;
   saveReview(item: ReviewItem | null, log: ReviewLog): Promise<void>;
+  /** Writes review items as given, with no log; for maintenance such as clearing lapses. */
+  saveReviewItems(items: ReviewItem[]): Promise<void>;
   listLogs(range?: { from: number; to: number }, deckIds?: Id[]): Promise<ReviewLog[]>;
   /** Earliest `at` among live learn-mode logs per review item; items with no learn log are absent. */
   getFirstLearnLogTimes(reviewItemIds: Id[]): Promise<Map<Id, number>>;

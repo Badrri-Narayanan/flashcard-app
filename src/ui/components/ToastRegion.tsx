@@ -4,6 +4,7 @@ interface ToastLike {
   id: number;
   message: string;
   onUndo?: () => void;
+  actionLabel?: string;
   durationMs: number;
 }
 
@@ -20,7 +21,7 @@ export default function ToastRegion({ toasts, onClose }: Props) {
       className="pointer-events-none fixed inset-x-4 bottom-20 z-40 mx-auto flex max-w-md flex-col gap-2 md:bottom-6"
     >
       {toasts.map((t) => (
-        <UndoToast key={t.id} message={t.message} onUndo={t.onUndo} durationMs={t.durationMs} onClose={() => onClose(t.id)} />
+        <UndoToast key={t.id} message={t.message} onUndo={t.onUndo} actionLabel={t.actionLabel} durationMs={t.durationMs} onClose={() => onClose(t.id)} />
       ))}
     </div>
   );

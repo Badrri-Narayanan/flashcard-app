@@ -319,6 +319,12 @@ export class DexieRepository implements Repository {
     );
   }
 
+  saveReviewItems(items: ReviewItem[]): Promise<void> {
+    return this.write(async () => {
+      await this.db.reviewItems.bulkPut(items);
+    });
+  }
+
   async listLogs(range?: { from: number; to: number }, deckIds?: Id[]): Promise<ReviewLog[]> {
     const decks = deckIds ? new Set(deckIds) : null;
     const logs = range

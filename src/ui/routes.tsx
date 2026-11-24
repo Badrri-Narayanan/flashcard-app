@@ -5,6 +5,7 @@ import CardEditor from './editor/CardEditor';
 import DeckPage from './editor/DeckPage';
 import StudyHome from './study/StudyHome';
 import StudyPage from './study/StudyPage';
+import TroublePage from './trouble/TroublePage';
 import ImportPage from './import/ImportPage';
 import SharePreviewPage from './share/SharePreviewPage';
 import ComingSoonPage from './pages/ComingSoonPage';
@@ -20,6 +21,7 @@ export const routes: RouteObject[] = [
       { path: '/deck/:id/edit/:cardId?', element: <CardEditor /> },
       { path: '/study', element: <StudyHome /> },
       { path: '/study/:scope/:id/:mode', element: <StudyPage /> },
+      { path: '/trouble', element: <TroublePage /> },
       { path: '/import', element: <ImportPage /> },
       { path: '/share/*', element: <SharePreviewPage /> },
       { path: '*', element: <ComingSoonPage /> },

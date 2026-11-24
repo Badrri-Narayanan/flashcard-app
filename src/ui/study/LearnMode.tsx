@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ToastRegion from '../components/ToastRegion';
 import { strings } from '../strings';
 import AllCaughtUp from './AllCaughtUp';
@@ -24,6 +25,7 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
   const s = useLearnSession(deckIds);
   const [helpOpen, setHelpOpen] = useState(false);
   const hints = useKeyHints();
+  const navigate = useNavigate();
   const { current, revealed } = s;
 
   const rate = (r: Rating) => {
@@ -110,7 +112,20 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
           )}
         </div>
       )}
-      <ToastRegion toasts={s.notice ? [{ ...s.notice, durationMs: 4000 }] : []} onClose={s.clearNotice} />
+      <ToastRegion
+        toasts={
+          s.notice
+            ? [{
+                id: s.notice.id,
+                message: s.notice.message,
+                durationMs: s.notice.action ? 8000 : 4000,
+                actionLabel: s.notice.action?.label,
+                onUndo: s.notice.action ? () => navigate(s.notice!.action!.to) : undefined,
+              }]
+            : []
+        }
+        onClose={s.clearNotice}
+      />
       {helpOpen && <KeyboardHelp mode="learn" onClose={() => setHelpOpen(false)} />}
     </div>
   );

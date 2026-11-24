@@ -74,6 +74,7 @@ export default function DeckPage() {
     }
   }
 
+  const troubleCount = cards.filter((c) => c.trouble).length;
   const quizReady = canQuiz(cards);
   const matchReady = canMatch(cards);
   const addHref = `/deck/${id}/edit`;
@@ -98,6 +99,9 @@ export default function DeckPage() {
               <button type="button" disabled aria-describedby="match-needs-cards" className={`${secondary} opacity-50`}>
                 {strings.study.match.entry}
               </button>
+            )}
+            {troubleCount > 0 && (
+              <Link to={`/trouble?deck=${id}`} className={secondary}>{strings.trouble.linkCount(troubleCount)}</Link>
             )}
             <ExportMenu scope="deck" id={id} />
             <button type="button" onClick={() => setSharing(true)} className={secondary}>{strings.deck.share}</button>

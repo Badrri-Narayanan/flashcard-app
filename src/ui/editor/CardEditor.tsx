@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { CardType } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import { strings } from '../strings';
@@ -13,19 +13,24 @@ import TagInput from './TagInput';
 import { useCardEditor } from './useCardEditor';
 
 const TYPES: CardType[] = ['basic', 'reversible', 'cloze', 'mcq'];
+const FOCUS_FIELDS = ['front', 'back', 'mnemonic'] as const;
 const btn = 'min-h-11 rounded-lg px-4 font-medium';
 const secondary = `${btn} border border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800`;
 
 export default function CardEditor() {
   const { id = '', cardId } = useParams();
   const ed = useCardEditor(id, cardId);
-  const { form, refs, lastField } = ed;
-  const [opened, setOpened] = useState<boolean | null>(null);
+  const { form, refs, lastField, mnemonicRef } = ed;
+  const [params] = useSearchParams();
+  const focusParam = params.get('focus');
+  const focus = FOCUS_FIELDS.find((f) => f === focusParam) ?? 'front';
+  const [opened, setOpened] = useState<boolean | null>(focus === 'mnemonic' ? true : null);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
 
   useEffect(() => {
-    if (ed.state === 'ready') refs.front.current?.focus();
-    // Focus the front field once the editor is first shown.
+    if (ed.state !== 'ready') return;
+    (focus === 'mnemonic' ? mnemonicRef : refs[focus]).current?.focus();
+    // Focus the requested field (front by default) once the editor is first shown.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ed.state]);
 
@@ -91,7 +96,7 @@ export default function CardEditor() {
             <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">{strings.editor.mnemonic}</summary>
             <label className="block text-sm font-medium">
               {strings.editor.mnemonicLabel}
-              <textarea value={form.mnemonic} rows={2} onChange={(e) => ed.patch({ mnemonic: e.target.value })}
+              <textarea ref={mnemonicRef} value={form.mnemonic} rows={2} onChange={(e) => ed.patch({ mnemonic: e.target.value })}
                 className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
             </label>
           </details>

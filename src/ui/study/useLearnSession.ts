@@ -51,11 +51,28 @@ export interface LearnSession {
   limitReached: boolean;
   moreNewAvailable: boolean;
   studyMore(): void;
-  notice: { id: number; message: string } | null;
+  notice: LearnNotice | null;
   clearNotice(): void;
 }
 
+export interface LearnNotice {
+  id: number;
+  message: string;
+  /** When present the toast offers this action, which navigates to `to`. */
+  action?: { label: string; to: string };
+}
+
+const RECENT_LOG_LIMIT = 20;
+
 const isLive = (r: { deletedAt: number | null } | undefined): boolean => !!r && r.deletedAt === null;
+
+async function recentCardLogs(card: Card): Promise<ReviewLog[]> {
+  const logs = await repo.listLogs(undefined, [card.deckId]);
+  return logs
+    .filter((l) => l.cardId === card.id)
+    .sort((a, b) => b.at - a.at)
+    .slice(0, RECENT_LOG_LIMIT);
+}
 
 export function useLearnSession(deckIds: Id[]): LearnSession {
   const [{ dayStartHour }] = useSettings();
@@ -71,7 +88,7 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
   const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   const [nextDueAt, setNextDueAt] = useState<number | null>(null);
   const [limitReached, setLimitReached] = useState(false);
-  const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
+  const [notice, setNotice] = useState<LearnNotice | null>(null);
   const [moreNewAvailable, setMoreNewAvailable] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const extraNew = useRef(0);
@@ -80,7 +97,10 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
   const answeredItem = useRef<ReviewItem | null>(null);
   const undoneLog = useRef<Id | null>(null);
   const noticeId = useRef(0);
-  const showNotice = useCallback((message: string) => setNotice({ id: ++noticeId.current, message }), []);
+  const showNotice = useCallback(
+    (message: string, action?: LearnNotice['action']) => setNotice({ id: ++noticeId.current, message, action }),
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -193,7 +213,14 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
         setUndoEntry({ previous, log, answer: entry, completed: !wasRequeued });
         shownAt.current = Date.now();
         try {
-          await onAfterLearnReview(current.card, next, []);
+          const card = liveCard as Card;
+          const logs = card.trouble ? [] : await recentCardLogs(card);
+          if (await onAfterLearnReview(card, next, logs, { saveCard: (c) => repo.saveCard(c) })) {
+            showNotice(strings.study.troubleToast, {
+              label: strings.study.fixIt,
+              to: `/trouble?deck=${card.deckId}`,
+            });
+          }
         } catch (err) {
           console.error('Post-review hook failed', err);
         }
