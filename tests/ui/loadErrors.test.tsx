@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -66,7 +66,7 @@ describe('route error screen', () => {
     expect(await screen.findByRole('heading', { name: 'Couldn’t read your data' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
-    expect(report).toHaveBeenCalledWith(expect.objectContaining({ name: 'OpenFailedError' }));
+    await waitFor(() => expect(report).toHaveBeenCalledWith(expect.objectContaining({ name: 'OpenFailedError' })));
     await userEvent.setup().click(screen.getByRole('button', { name: 'Export backup' }));
     expect(runExport).toHaveBeenCalledWith('library', null, 'json', true);
   });
@@ -80,7 +80,7 @@ describe('study and print load failures', () => {
     vi.spyOn(repo, 'listCards').mockRejectedValueOnce(openFailure()).mockImplementation(listCards);
     const report = renderAt(`/study/deck/${deck.id}/${mode}`);
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load your cards.');
-    expect(report).toHaveBeenCalled();
+    await waitFor(() => expect(report).toHaveBeenCalled());
     await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findAllByText(/question \d/)).not.toHaveLength(0);
   });
