@@ -10,6 +10,7 @@ import { useLoadRetry } from '../hooks/useLoadRetry';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { loadScopeCards } from './loadScopeCards';
+import { checkPracticeTrouble, troubleToast, type StudyToast } from './troubleCheck';
 
 export const TYPE_LENGTH = 20;
 
@@ -47,7 +48,7 @@ export interface TypeSession {
   next(): void;
   finished: boolean;
   results: TypeResult[];
-  notice: { id: number; message: string } | null;
+  notice: StudyToast | null;
   clearNotice(): void;
 }
 
@@ -61,7 +62,7 @@ export function useTypeSession(deckIds: string[]): TypeSession {
   const [finished, setFinished] = useState(false);
   const shownAt = useRef(0);
   const busy = useRef(false);
-  const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
+  const [notice, setNotice] = useState<StudyToast | null>(null);
   const noticeId = useRef(0);
   const load = useLoadRetry();
   const { attempt, fail: failLoad } = load;
@@ -140,6 +141,10 @@ export function useTypeSession(deckIds: string[]): TypeSession {
         const log = await makeLog(current, correct, ms, at);
         if (log) await repo.saveReview(null, log);
         setResults((r) => [...r, { item: current, input, match, correct, overridden: false, ms, log }]);
+        if (log) {
+          const flaggedDeck = await checkPracticeTrouble(current.card.id);
+          if (flaggedDeck) setNotice({ id: ++noticeId.current, ...troubleToast(flaggedDeck) });
+        }
       } catch (err) {
         fail('Failed to save type result', err);
       } finally {

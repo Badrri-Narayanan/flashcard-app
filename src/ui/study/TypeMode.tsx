@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { DiffPart } from '../../domain/matcher';
 import type { Id } from '../../domain/types';
 import CardContent from '../components/CardContent';
+import LoadError from '../components/LoadError';
 import ToastRegion from '../components/ToastRegion';
 import SpeakButton from '../speech/SpeakButton';
 import { strings } from '../strings';
 import KeyboardHelp from './KeyboardHelp';
 import SessionSummary from './SessionSummary';
-import LoadError from '../components/LoadError';
 import StudyNotice from './StudyNotice';
 import StudyTopBar from './StudyTopBar';
+import { studyToasts } from './studyToasts';
 import { useStudyKeys } from './useStudyKeys';
 import { useTypeSession } from './useTypeSession';
 
@@ -38,6 +39,7 @@ function Diff({ parts }: { parts: DiffPart[] }) {
 }
 
 export default function TypeMode({ deckIds, backTo, learnHref }: Props) {
+  const navigate = useNavigate();
   const s = useTypeSession(deckIds);
   const [helpOpen, setHelpOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -213,7 +215,7 @@ export default function TypeMode({ deckIds, backTo, learnHref }: Props) {
       >
         {last ? t.seeResults : t.next}
       </button>
-      <ToastRegion toasts={s.notice ? [{ ...s.notice, durationMs: 4000 }] : []} onClose={s.clearNotice} />
+      <ToastRegion toasts={studyToasts(s.notice, navigate)} onClose={s.clearNotice} />
       {helpOpen && <KeyboardHelp mode="type" onClose={() => setHelpOpen(false)} />}
     </div>
   );

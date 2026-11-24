@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Id } from '../../domain/types';
+import LoadError from '../components/LoadError';
 import ToastRegion from '../components/ToastRegion';
 import { strings } from '../strings';
 import { formatDuration } from './format';
 import KeyboardHelp from './KeyboardHelp';
-import LoadError from '../components/LoadError';
 import StudyNotice from './StudyNotice';
 import StudyTopBar from './StudyTopBar';
+import { studyToasts } from './studyToasts';
 import { isWideViewport, usePrefersReducedMotion } from './useKeyHints';
 import { useMatchGame } from './useMatchGame';
 import { useStudyKeys } from './useStudyKeys';
@@ -24,6 +25,7 @@ const PAIRS_WIDE = 8;
 const button = 'inline-flex min-h-11 items-center justify-center rounded-lg px-5 font-medium';
 
 function Round({ deckIds, backTo, trackBest, onPlayAgain }: Props & { onPlayAgain(): void }) {
+  const navigate = useNavigate();
   const [pairTarget] = useState(() => (isWideViewport() ? PAIRS_WIDE : PAIRS_NARROW));
   const g = useMatchGame(deckIds, pairTarget, trackBest);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -95,7 +97,7 @@ function Round({ deckIds, backTo, trackBest, onPlayAgain }: Props & { onPlayAgai
       <p role="status" className="min-h-6 text-center font-medium">
         {g.shaking.size > 0 ? `✗ ${m.wrongPair}` : ''}
       </p>
-      <ToastRegion toasts={g.notice ? [{ ...g.notice, durationMs: 4000 }] : []} onClose={g.clearNotice} />
+      <ToastRegion toasts={studyToasts(g.notice, navigate)} onClose={g.clearNotice} />
       {helpOpen && <KeyboardHelp mode="match" onClose={() => setHelpOpen(false)} />}
     </div>
   );

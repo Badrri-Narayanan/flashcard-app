@@ -10,6 +10,7 @@ import { useStorageErrors } from '../components/storageError';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { hasUnseenNew, loadLearnQueue } from './loadLearnQueue';
+import { recentCardLogs, troubleToast, type StudyToast } from './troubleCheck';
 
 const STUDY_MORE_NEW = 10;
 
@@ -56,18 +57,10 @@ export interface LearnSession {
   clearNotice(): void;
 }
 
-export interface LearnNotice {
-  id: number;
-  message: string;
-  /** When present the toast offers this action, which navigates to `to`. */
-  action?: { label: string; to: string };
-}
-
-const RECENT_LOG_LIMIT = 20;
+export type LearnNotice = StudyToast;
 
 const isLive = (r: { deletedAt: number | null } | undefined): boolean => !!r && r.deletedAt === null;
 
-const recentCardLogs = (card: Card): Promise<ReviewLog[]> => repo.listLogsForCard(card.id, RECENT_LOG_LIMIT);
 
 export function useLearnSession(deckIds: Id[]): LearnSession {
   const { reportStorageError } = useStorageErrors();
@@ -212,10 +205,8 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
           const card = liveCard as Card;
           const logs = card.trouble ? [] : await recentCardLogs(card);
           if (await onAfterLearnReview(card, next, logs, { saveCard: (c) => repo.saveCard(c) })) {
-            showNotice(strings.study.troubleToast, {
-              label: strings.study.fixIt,
-              to: `/trouble?deck=${card.deckId}`,
-            });
+            const toast = troubleToast(card.deckId);
+            showNotice(toast.message, toast.action);
           }
         } catch (err) {
           console.error('Post-review hook failed', err);

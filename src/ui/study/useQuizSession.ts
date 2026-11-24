@@ -9,6 +9,7 @@ import { useLoadRetry } from '../hooks/useLoadRetry';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { loadScopeCards } from './loadScopeCards';
+import { checkPracticeTrouble, troubleToast, type StudyToast } from './troubleCheck';
 
 export const QUIZ_LENGTH = 10;
 
@@ -44,7 +45,7 @@ export interface QuizSession {
   next(): void;
   finished: boolean;
   results: QuizResult[];
-  notice: { id: number; message: string } | null;
+  notice: StudyToast | null;
   clearNotice(): void;
 }
 
@@ -81,7 +82,7 @@ export function useQuizSession(deckIds: Id[]): QuizSession {
   const [finished, setFinished] = useState(false);
   const shownAt = useRef(0);
   const busy = useRef(false);
-  const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
+  const [notice, setNotice] = useState<StudyToast | null>(null);
   const noticeId = useRef(0);
   const load = useLoadRetry();
   const { attempt, fail } = load;
@@ -135,6 +136,10 @@ export function useQuizSession(deckIds: Id[]): QuizSession {
         }
         setResults((r) => [...r, { question: current, picked: optionIndex, correct, ms: durationMs }]);
         setPicked(optionIndex);
+        if (item) {
+          const flaggedDeck = await checkPracticeTrouble(current.card.id);
+          if (flaggedDeck) setNotice({ id: ++noticeId.current, ...troubleToast(flaggedDeck) });
+        }
       } catch (err) {
         console.error('Failed to save quiz result', err);
         setNotice({ id: ++noticeId.current, message: strings.study.saveFailed });

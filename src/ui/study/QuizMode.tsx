@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Id } from '../../domain/types';
 import CardContent from '../components/CardContent';
+import LoadError from '../components/LoadError';
 import ToastRegion from '../components/ToastRegion';
 import SpeakButton from '../speech/SpeakButton';
 import { strings } from '../strings';
 import KeyboardHelp from './KeyboardHelp';
 import SessionSummary from './SessionSummary';
-import LoadError from '../components/LoadError';
 import StudyNotice from './StudyNotice';
 import StudyTopBar from './StudyTopBar';
+import { studyToasts } from './studyToasts';
 import { useKeyHints } from './useKeyHints';
 import { useQuizSession } from './useQuizSession';
 import { useStudyKeys } from './useStudyKeys';
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function QuizMode({ deckIds, backTo, learnHref }: Props) {
+  const navigate = useNavigate();
   const s = useQuizSession(deckIds);
   const [helpOpen, setHelpOpen] = useState(false);
   const hints = useKeyHints();
@@ -145,7 +147,7 @@ export default function QuizMode({ deckIds, backTo, learnHref }: Props) {
           {last ? q.seeResults : q.next}
         </button>
       </div>
-      <ToastRegion toasts={s.notice ? [{ ...s.notice, durationMs: 4000 }] : []} onClose={s.clearNotice} />
+      <ToastRegion toasts={studyToasts(s.notice, navigate)} onClose={s.clearNotice} />
       {helpOpen && <KeyboardHelp mode="quiz" onClose={() => setHelpOpen(false)} />}
     </div>
   );

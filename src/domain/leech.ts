@@ -9,12 +9,16 @@ const LIST_LINE = /^\s*(?:[-*•]|\d+[.)])\s+\S/;
 
 export type Fix = 'split' | 'mnemonic' | 'image' | 'rephrase';
 
-/** Trouble = many lapses, or poor accuracy across enough non-learn (quiz/type/match/cram) answers. */
-export function isTrouble(item: ReviewItem, recentLogs: ReviewLog[]): boolean {
-  if (item.lapses >= TROUBLE_LAPSES) return true;
+/** Poor accuracy across enough non-learn (quiz/type/match/cram) answers. */
+function isLowAccuracy(recentLogs: ReviewLog[]): boolean {
   const answers = recentLogs.filter((l) => l.mode !== 'learn');
   if (answers.length < MIN_ACCURACY_LOGS) return false;
   return answers.filter((l) => l.correct).length / answers.length < LOW_ACCURACY;
+}
+
+/** Trouble = many lapses, or poor accuracy across enough non-learn answers. */
+export function isTrouble(item: ReviewItem, recentLogs: ReviewLog[]): boolean {
+  return item.lapses >= TROUBLE_LAPSES || isLowAccuracy(recentLogs);
 }
 
 function looksLikeList(back: string): boolean {
@@ -48,6 +52,17 @@ export async function onAfterLearnReview(
 ): Promise<boolean> {
   if (card.trouble) return false;
   if (!isTrouble(item, recentLogs.filter((l) => l.at > card.updatedAt))) return false;
+  await deps.saveCard({ ...card, trouble: true });
+  return true;
+}
+
+/**
+ * Hook run after each Quiz, Type or Match answer: only the accuracy rule applies, and scheduling is never read or
+ * changed. Like {@link onAfterLearnReview}, only logs newer than the card's last edit count. Returns true when newly flagged.
+ */
+export async function onAfterPracticeAnswer(card: Card, recentLogs: ReviewLog[], deps: LeechDeps): Promise<boolean> {
+  if (card.trouble) return false;
+  if (!isLowAccuracy(recentLogs.filter((l) => l.at > card.updatedAt))) return false;
   await deps.saveCard({ ...card, trouble: true });
   return true;
 }

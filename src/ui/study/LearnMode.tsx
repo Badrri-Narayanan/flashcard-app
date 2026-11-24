@@ -11,6 +11,7 @@ import KeyboardHelp from './KeyboardHelp';
 import RatingBar from './RatingBar';
 import SessionSummary from './SessionSummary';
 import StudyTopBar from './StudyTopBar';
+import { studyToasts } from './studyToasts';
 import { useKeyHints } from './useKeyHints';
 import { useLearnSession } from './useLearnSession';
 import { useStudyKeys } from './useStudyKeys';
@@ -116,17 +117,7 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
         </div>
       )}
       <ToastRegion
-        toasts={
-          s.notice
-            ? [{
-                id: s.notice.id,
-                message: s.notice.message,
-                durationMs: s.notice.action ? 8000 : 4000,
-                actionLabel: s.notice.action?.label,
-                onUndo: s.notice.action ? () => navigate(s.notice!.action!.to) : undefined,
-              }]
-            : []
-        }
+        toasts={studyToasts(s.notice, navigate)}
         onClose={s.clearNotice}
       />
       {helpOpen && <KeyboardHelp mode="learn" onClose={() => setHelpOpen(false)} />}

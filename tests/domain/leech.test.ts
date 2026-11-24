@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { baseRecord } from '../../src/domain/ids';
-import { isTrouble, onAfterLearnReview, suggestFixes, TROUBLE_LAPSES } from '../../src/domain/leech';
+import { isTrouble, onAfterLearnReview, onAfterPracticeAnswer, suggestFixes, TROUBLE_LAPSES } from '../../src/domain/leech';
 import type { Card, ReviewItem, ReviewLog, StudyMode } from '../../src/domain/types';
 
 function mkCard(over: Partial<Card> = {}): Card {
@@ -97,5 +97,19 @@ describe('onAfterLearnReview', () => {
   it('ignores learn-mode logs', async () => {
     const saveCard = vi.fn().mockResolvedValue(undefined);
     expect(await onAfterLearnReview(mkCard(), mkItem(0), logs(0, 10, 'learn'), { saveCard })).toBe(false);
+  });
+});
+
+describe('onAfterPracticeAnswer', () => {
+  it('flags on low accuracy only, counting logs after the last edit', async () => {
+    const saveCard = vi.fn().mockResolvedValue(undefined);
+    const card = mkCard({ updatedAt: 2000 });
+    expect(await onAfterPracticeAnswer(card, logs(1, 8, 'quiz', 1500), { saveCard })).toBe(false);
+    expect(await onAfterPracticeAnswer(card, logs(0, 10, 'learn', 2001), { saveCard })).toBe(false);
+    expect(await onAfterPracticeAnswer(card, logs(4, 4, 'type', 2001), { saveCard })).toBe(false);
+    expect(saveCard).not.toHaveBeenCalled();
+    expect(await onAfterPracticeAnswer(card, logs(1, 8, 'match', 2001), { saveCard })).toBe(true);
+    expect(saveCard).toHaveBeenCalledWith({ ...card, trouble: true });
+    expect(await onAfterPracticeAnswer({ ...card, trouble: true }, logs(0, 9, 'quiz', 2001), { saveCard })).toBe(false);
   });
 });

@@ -10,6 +10,7 @@ import { useLoadRetry } from '../hooks/useLoadRetry';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { loadScopeCards } from './loadScopeCards';
+import { checkPracticeTrouble, troubleToast, type StudyToast } from './troubleCheck';
 
 export const WRONG_PENALTY_MS = 1000;
 export const SHAKE_MS = 500;
@@ -42,7 +43,7 @@ export interface MatchGame {
   previousBestMs: number | null;
   newBest: boolean;
   pick(key: string): void;
-  notice: { id: number; message: string } | null;
+  notice: StudyToast | null;
   clearNotice(): void;
 }
 
@@ -90,7 +91,7 @@ export function useMatchGame(deckIds: Id[], pairTarget: number, trackBest: boole
   const [now, setNow] = useState(Date.now);
   const [finished, setFinished] = useState(false);
   const [result, setResult] = useState({ finalMs: 0, previousBestMs: null as number | null, newBest: false });
-  const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
+  const [notice, setNotice] = useState<StudyToast | null>(null);
   const noticeId = useRef(0);
   const lastAt = useRef(0);
   const wrongPairs = useRef(new Set<Id>());
@@ -154,6 +155,8 @@ export function useMatchGame(deckIds: Id[], pairTarget: number, trackBest: boole
         dayKey: dayKey(at, dayStartHour),
       };
       await repo.saveReview(null, log);
+      const flaggedDeck = await checkPracticeTrouble(card.id);
+      if (flaggedDeck) setNotice({ id: ++noticeId.current, ...troubleToast(flaggedDeck) });
     },
     [dayStartHour],
   );
