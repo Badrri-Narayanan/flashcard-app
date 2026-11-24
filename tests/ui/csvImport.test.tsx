@@ -32,9 +32,9 @@ async function setup(path: string, decks: Deck[] = []) {
   render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />);
 }
 
-async function upload(text: string) {
+async function upload(text: string | Uint8Array) {
   const user = userEvent.setup();
-  const file = new File([text], 'cards.csv', { type: 'text/csv' });
+  const file = new File([text as BlobPart], 'cards.csv', { type: 'text/csv' });
   await user.upload(await screen.findByLabelText('CSV file'), file);
   return user;
 }
@@ -59,6 +59,22 @@ describe('csv import dialog', () => {
     await user.click(screen.getByRole('button', { name: 'Import 1 card' }));
     expect(await screen.findByText('Imported 1 card')).toBeInTheDocument();
     expect((await repo.listCards(deck.id)).map((c) => c.front)).toEqual(['hola']);
+  });
+
+  it('reads a Windows-1252 file from Excel and says so', async () => {
+    await setup('/import?mode=csv', [mkDeck()]);
+    await upload(new Uint8Array([0x63, 0x61, 0x66, 0xe9, 0x2c, 0x63, 0x6f, 0x66, 0x66, 0x65, 0x65]));
+    const table = await screen.findByRole('table', { name: 'Preview' });
+    expect(within(table).getAllByRole('row')[1]).toHaveTextContent(/^cafécoffee/);
+    expect(screen.getByText(/read as Windows-1252/)).toBeInTheDocument();
+  });
+
+  it('blocks a file with an unmatched quote and names the row', async () => {
+    await setup('/import?mode=csv', [mkDeck()]);
+    await upload('front,back\nhola,hello\n"cafe,coffee\nuno,one\ndos,two');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Row 3 has an unmatched quote mark');
+    expect(screen.queryByRole('table', { name: 'Preview' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import 0 cards' })).toBeDisabled();
   });
 
   it('creates the cards in a new deck', async () => {

@@ -13,14 +13,37 @@ const HEADER_FIELD: Record<string, CsvField> = {
 const CARD_TYPES: Card['type'][] = ['basic', 'reversible', 'cloze', 'mcq'];
 const CSV_COLUMNS = ['front', 'back', 'tags', 'type', 'mnemonic', 'distractors'];
 
-export function parseCsv(text: string): { headers: string[] | null; rows: string[][]; delimiter: Delimiter } {
+export type CsvEncoding = 'utf-8' | 'windows-1252';
+
+/** Decodes as UTF-8, falling back to Windows-1252 (what Excel's "CSV (Comma delimited)" writes) when that fails. */
+export function decodeCsvBytes(bytes: Uint8Array): { text: string; encoding: CsvEncoding } {
+  try {
+    return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes), encoding: 'utf-8' };
+  } catch {
+    return { text: new TextDecoder('windows-1252').decode(bytes), encoding: 'windows-1252' };
+  }
+}
+
+export interface ParsedCsv {
+  headers: string[] | null;
+  rows: string[][];
+  delimiter: Delimiter;
+  /** 1-based file row of the first unmatched quote; the rows after it cannot be trusted. */
+  quoteErrorRow: number | null;
+}
+
+export function parseCsv(text: string): ParsedCsv {
   const clean = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   const result = Papa.parse<string[]>(clean, { delimitersToGuess: [',', ';', '\t'], skipEmptyLines: true });
   const all = result.data;
   const delimiter = ([',', ';', '\t'] as string[]).includes(result.meta.delimiter) ? (result.meta.delimiter as Delimiter) : ',';
+  const quote = result.errors.find((e) => e.type === 'Quotes');
+  const quoteErrorRow = quote ? (quote.row ?? 0) + 1 : null;
   const first = all[0];
   const hasHeader = !!first && first.some((c) => HEADER_WORDS.includes(c.trim().toLowerCase()));
-  return hasHeader ? { headers: first, rows: all.slice(1), delimiter } : { headers: null, rows: all, delimiter };
+  return hasHeader
+    ? { headers: first, rows: all.slice(1), delimiter, quoteErrorRow }
+    : { headers: null, rows: all, delimiter, quoteErrorRow };
 }
 
 export function guessMapping(headers: string[] | null, columnCount: number): CsvField[] {

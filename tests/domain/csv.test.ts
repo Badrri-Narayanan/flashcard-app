@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { baseRecord } from '../../src/domain/ids';
-import { cardsToCsv, guessMapping, parseCsv, rowsToDrafts } from '../../src/domain/csv';
+import { cardsToCsv, decodeCsvBytes, guessMapping, parseCsv, rowsToDrafts } from '../../src/domain/csv';
 import type { Card } from '../../src/domain/types';
 
 function mkCard(over: Partial<Card>): Card {
@@ -11,6 +11,16 @@ function mkCard(over: Partial<Card>): Card {
 }
 
 describe('csv', () => {
+  it('decodes UTF-8, and falls back to Windows-1252 for Excel files', () => {
+    expect(decodeCsvBytes(new TextEncoder().encode('café,日本'))).toEqual({ text: 'café,日本', encoding: 'utf-8' });
+    expect(decodeCsvBytes(new Uint8Array([0x63, 0x61, 0x66, 0xe9, 0x2c, 0x80]))).toEqual({ text: 'café,€', encoding: 'windows-1252' });
+  });
+
+  it('reports the row of an unmatched quote instead of merging the rest of the file', () => {
+    expect(parseCsv('front,back\nhola,hello\n"cafe,coffee\nuno,one\ndos,two').quoteErrorRow).toBe(3);
+    expect(parseCsv('front,back\nhola,hello').quoteErrorRow).toBeNull();
+  });
+
   it('handles BOM and CRLF', () => {
     const r = parseCsv('﻿front,back\r\nhola,hello\r\nadios,bye\r\n');
     expect(r.headers).toEqual(['front', 'back']);

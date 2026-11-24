@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { repo } from '../../data/repo';
 import { newDeckSettings } from '../settings/newDeckSettings';
 import { StorageFullError } from '../../data/repository';
-import { guessMapping, isImportable, parseCsv, rowsToDrafts, type CsvField } from '../../domain/csv';
+import { decodeCsvBytes, guessMapping, isImportable, parseCsv, rowsToDrafts, type CsvEncoding, type CsvField } from '../../domain/csv';
 import { baseRecord } from '../../domain/ids';
 import { type Card, type Deck, type Id } from '../../domain/types';
 import Dialog from '../components/Dialog';
@@ -27,12 +27,12 @@ const FIELDS: CsvField[] = ['front', 'back', 'tags', 'type', 'mnemonic', 'distra
 const fieldClass =
   'mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800';
 
-function readText(file: File): Promise<string> {
+function readBytes(file: File): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
     reader.onerror = () => reject(reader.error);
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   });
 }
 
@@ -92,6 +92,7 @@ function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) 
   const [parsed, setParsed] = useState<ReturnType<typeof parseCsv> | null>(null);
   const [mapping, setMapping] = useState<CsvField[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [encoding, setEncoding] = useState<CsvEncoding>('utf-8');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const nameErrorId = useId();
@@ -108,7 +109,14 @@ function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) 
     if (!file) return;
     setFileError(null);
     try {
-      const result = parseCsv(await readText(file));
+      const decoded = decodeCsvBytes(await readBytes(file));
+      const result = parseCsv(decoded.text);
+      setEncoding(decoded.encoding);
+      if (result.quoteErrorRow !== null) {
+        setParsed(null);
+        setFileError(strings.csv.unmatchedQuote(result.quoteErrorRow));
+        return;
+      }
       if (result.rows.length === 0) {
         setParsed(null);
         setFileError(strings.csv.empty);
@@ -220,6 +228,7 @@ function CsvForm({ decks, deckId, initialFile, onClose, onCreated }: FormProps) 
             {fileError}
           </p>
         )}
+        {parsed && encoding === 'windows-1252' && <p className="text-sm">{strings.csv.windows1252}</p>}
         <label className="block text-sm font-medium">
           {strings.csv.targetDeck}
           <select value={target} onChange={(e) => setChoice(e.target.value)} className={fieldClass}>

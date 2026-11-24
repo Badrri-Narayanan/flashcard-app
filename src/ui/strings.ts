@@ -287,6 +287,8 @@ export const strings = {
     dropHint: 'Choose a file or drop it here',
     readFailed: 'Could not read that file.',
     empty: 'No rows found in that file.',
+    unmatchedQuote: (row: number) => `Row ${row} has an unmatched quote mark ("), so the rows after it can't be read. Fix it in your spreadsheet and try again.`,
+    windows1252: 'This file was read as Windows-1252 (Western European) text because it is not UTF-8. Check that accented letters look right below.',
     mapping: 'Column mapping',
     column: (n: number, header: string | null) => (header ? `Column ${n} (${header})` : `Column ${n}`),
     fields: { front: 'Front', back: 'Back', tags: 'Tags', type: 'Type', mnemonic: 'Mnemonic', distractors: 'Distractors', ignore: 'Ignore' },
