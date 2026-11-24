@@ -18,6 +18,15 @@ interface Props {
   onClose: () => void;
 }
 
+/** A spread of subjects learners and teachers make decks for. Any other emoji can be typed into the box. */
+const EMOJI_CHOICES = [
+  '📚', '📁', '📝', '🧠', '💡', '🎯', '⭐', '🔥',
+  '💻', '🖥️', '⌨️', '🐍', '☕', '🗄️', '☁️', '🔒',
+  '🗣️', '🌍', '🇬🇧', '🇪🇸', '🇫🇷', '🇩🇪', '🇯🇵', '🇮🇳',
+  '🔢', '➗', '📐', '🧪', '🧬', '⚛️', '🔭', '🩺',
+  '🏛️', '🗺️', '⚖️', '💰', '🎵', '🎨', '⚽', '🍳',
+];
+
 const fieldClass =
   'mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800';
 
@@ -31,6 +40,8 @@ export default function EntityDialog({ title, initial, defaultEmoji, onSubmit, o
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
   const errorId = useId();
+  const emojiHintId = useId();
+  const emojiInputId = useId();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -76,10 +87,41 @@ export default function EntityDialog({ title, initial, defaultEmoji, onSubmit, o
           {strings.dialog.description}
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={fieldClass} />
         </label>
-        <label className="block text-sm font-medium">
-          {strings.dialog.emoji}
-          <input value={emoji} onChange={(e) => setEmoji(e.target.value)} className={`${fieldClass} w-24 text-center text-xl`} />
-        </label>
+        <div>
+          <label htmlFor={emojiInputId} className="block text-sm font-medium">
+            {strings.dialog.emoji}
+          </label>
+          <div className="mt-1 flex items-center gap-3">
+            <input
+              id={emojiInputId}
+              value={emoji}
+              onChange={(e) => setEmoji(e.target.value)}
+              aria-describedby={emojiHintId}
+              placeholder={defaultEmoji}
+              className={`${fieldClass} !mt-0 !w-20 shrink-0 text-center text-2xl`}
+            />
+            <p id={emojiHintId} className="text-xs font-normal text-slate-600 dark:text-slate-400">
+              {strings.dialog.emojiHint}
+            </p>
+          </div>
+          <div role="radiogroup" aria-label={strings.dialog.emojiPicker} className="mt-2 flex max-h-32 flex-wrap gap-1 overflow-y-auto">
+            {EMOJI_CHOICES.map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                role="radio"
+                aria-checked={emoji === choice}
+                aria-label={choice}
+                onClick={() => setEmoji(choice)}
+                className={`size-10 rounded-lg text-xl hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                  emoji === choice ? 'bg-accent-50 ring-2 ring-accent-600 dark:bg-slate-800' : ''
+                }`}
+              >
+                {choice}
+              </button>
+            ))}
+          </div>
+        </div>
         <div role="radiogroup" aria-label={strings.dialog.color}>
           <span className="text-sm font-medium">{strings.dialog.color}</span>
           <div className="mt-1 flex flex-wrap gap-2">

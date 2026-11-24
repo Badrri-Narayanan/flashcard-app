@@ -81,6 +81,22 @@ describe('library', () => {
     expect(within(li).getByRole('link', { name: /Spanish/ })).toBeInTheDocument();
   });
 
+  it('picks an emoji from the grid or takes any typed emoji', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: 'New deck' }));
+    const box = screen.getByRole('textbox', { name: 'Emoji' });
+    expect(box).toHaveValue('📚');
+    await user.click(within(screen.getByRole('radiogroup', { name: 'Suggested emoji' })).getByRole('radio', { name: '🧪' }));
+    expect(box).toHaveValue('🧪');
+    expect(screen.getByRole('radio', { name: '🧪' })).toHaveAttribute('aria-checked', 'true');
+    await user.clear(box);
+    await user.type(box, '🦉');
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Owls');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(async () => expect((await repo.listDecks())[0]?.emoji).toBe('🦉'));
+  });
+
   it('delete deck then Undo restores it', async () => {
     const user = userEvent.setup();
     await repo.saveDeck(mkDeck({ name: 'Biology' }));
