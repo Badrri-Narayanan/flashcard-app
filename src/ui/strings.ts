@@ -1,6 +1,21 @@
 export const strings = {
   app: {
     title: 'Flashcards',
+    pageTitle: (page: string) => `${page} · Flashcards`,
+  },
+  pages: {
+    library: 'Library',
+    folder: 'Folder',
+    deck: 'Deck',
+    editCard: 'Edit card',
+    study: 'Study',
+    trouble: 'Trouble cards',
+    import: 'Import',
+    stats: 'Stats',
+    share: 'Shared deck',
+    settings: 'Settings',
+    print: 'Print',
+    comingSoon: 'Coming soon',
   },
   nav: {
     main: 'Main',

@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import BackupReminder from '../components/BackupReminder';
 import StorageBanner from '../components/StorageBanner';
 import UpdatePrompt from '../components/UpdatePrompt';
 import { strings } from '../strings';
+import { useRouteTitle } from './useRouteTitle';
 
 const icon = {
   width: 24,
@@ -69,10 +70,32 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100',
   ].join(' ');
 
+/**
+ * After a navigation (not the first load), moves focus to <main> so keyboard and screen-reader users start at the new
+ * page; a page that already placed focus inside <main> keeps it.
+ */
+function useFocusMainOnNavigate() {
+  const { pathname } = useLocation();
+  const main = useRef<HTMLElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const el = main.current;
+    const active = document.activeElement;
+    if (el && (!active || active === document.body || !el.contains(active))) el.focus();
+  }, [pathname]);
+  return main;
+}
+
 export default function AppShell() {
+  useRouteTitle();
+  const main = useFocusMainOnNavigate();
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 md:flex dark:bg-slate-950 dark:text-slate-100">
-      <main tabIndex={-1} className="min-w-0 flex-1 pb-24 outline-none md:pb-8">
+      <main ref={main} tabIndex={-1} className="min-w-0 flex-1 pb-24 outline-none md:pb-8">
         <StorageBanner />
         <BackupReminder />
         <Outlet />

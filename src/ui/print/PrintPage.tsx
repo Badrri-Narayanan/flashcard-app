@@ -5,6 +5,7 @@ import type { Card, Deck } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import LoadError from '../components/LoadError';
 import { useLoadRetry } from '../hooks/useLoadRetry';
+import { useRouteTitle } from '../layout/useRouteTitle';
 import { strings } from '../strings';
 import './print.css';
 import {
@@ -124,6 +125,7 @@ export default function PrintPage() {
   const [paper, setPaper] = useState<Paper>('a4');
   const load = useLoadRetry();
   const { attempt, fail } = load;
+  useRouteTitle();
 
   useEffect(() => {
     let cancelled = false;
