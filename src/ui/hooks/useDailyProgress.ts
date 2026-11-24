@@ -3,6 +3,7 @@ import { repo } from '../../data/repo';
 import { dayKey, startOfStudyDay } from '../../domain/day';
 import { dailyCounts, streak, type Streak } from '../../domain/stats';
 import { useSettings } from '../settings/settings';
+import { useStudyDayNow } from './useStudyDayNow';
 
 const DAY_MS = 86_400_000;
 
@@ -17,6 +18,7 @@ export interface DailyProgress {
 /** Cheap range query over the `at` index: today only, or the last 366 days when the streak is wanted. */
 export function useDailyProgress(withStreak: boolean): DailyProgress | undefined {
   const [{ dailyGoal, dayStartHour }] = useSettings();
+  const studyDay = useStudyDayNow(dayStartHour);
   return useLiveQuery(async () => {
     const now = Date.now();
     const from = withStreak ? now - 366 * DAY_MS : startOfStudyDay(now, dayStartHour);
@@ -27,5 +29,5 @@ export function useDailyProgress(withStreak: boolean): DailyProgress | undefined
       goal: dailyGoal,
       ...(withStreak ? { streak: streak(counts, todayKey, dailyGoal) } : {}),
     };
-  }, [withStreak, dailyGoal, dayStartHour]);
+  }, [withStreak, dailyGoal, dayStartHour, studyDay]);
 }

@@ -5,6 +5,7 @@ import { buildTree, descendantDeckIds, type TreeNode } from '../../domain/tree';
 import { endOfStudyDay } from '../../domain/day';
 import type { Deck, Folder, Id } from '../../domain/types';
 import { DEFAULT_SETTINGS, SettingsContext } from '../settings/settings';
+import { useStudyDayNow } from './useStudyDayNow';
 
 export type DueCounts = Record<Id, { due: number; new: number }>;
 
@@ -41,7 +42,8 @@ async function load(dayStartHour: number): Promise<Snapshot> {
 
 export function useLibrary() {
   const dayStartHour = (useContext(SettingsContext)?.[0] ?? DEFAULT_SETTINGS).dayStartHour;
-  const snapshot = useLiveQuery(() => load(dayStartHour), [dayStartHour]);
+  const studyDay = useStudyDayNow(dayStartHour);
+  const snapshot = useLiveQuery(() => load(dayStartHour), [dayStartHour, studyDay]);
   const folders = snapshot?.folders ?? EMPTY_FOLDERS;
   const decks = snapshot?.decks ?? EMPTY_DECKS;
   const tree = useMemo(() => (snapshot ? buildTree(folders, decks) : EMPTY_TREE), [snapshot, folders, decks]);

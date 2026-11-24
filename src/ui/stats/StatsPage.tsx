@@ -5,6 +5,7 @@ import { calibration, overconfidentCards } from '../../domain/calibration';
 import { addDays, dailyCounts, deckBreakdown, forecast, heatmap, retentionLogs, streak } from '../../domain/stats';
 import { dayKey } from '../../domain/day';
 import type { Id } from '../../domain/types';
+import { useStudyDayNow } from '../hooks/useStudyDayNow';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import CalibrationChart from './CalibrationChart';
@@ -18,6 +19,7 @@ export default function StatsPage() {
   const [{ dailyGoal, dayStartHour }] = useSettings();
   const [selected, setSelected] = useState<Id | 'all'>('all');
   const t = strings.stats;
+  const studyDay = useStudyDayNow(dayStartHour);
 
   const data = useLiveQuery(async () => {
     const now = Date.now();
@@ -30,7 +32,7 @@ export default function StatsPage() {
     const recentLearn = logs.filter((l) => l.mode === 'learn' && l.at >= now - 30 * DAY_MS);
     const firstLearn = await repo.getFirstLearnLogTimes([...new Set(recentLearn.map((l) => l.reviewItemId))]);
     return { now, logs, decks, cards, items, retention: retentionLogs(recentLearn, firstLearn, now) };
-  }, []);
+  }, [studyDay]);
 
   const view = useMemo(() => {
     if (!data) return null;
