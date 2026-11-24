@@ -4,6 +4,8 @@ import { db } from '../../src/data/db';
 import { repo } from '../../src/data/repo';
 import { planImport, validateBackup } from '../../src/domain/backup';
 import { runExport } from '../../src/ui/library/runExport';
+import { buildSharePayload } from '../../src/domain/share';
+import { importShare } from '../../src/ui/share/importShare';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
 import type { Card, Deck, Folder, Media, ReviewItem, ReviewLog } from '../../src/domain/types';
@@ -184,6 +186,52 @@ describe('backupIO', () => {
     const copyItems = await db.reviewItems.where('cardId').equals(copy.id).toArray();
     expect(copyItems).toHaveLength(1);
     expect(copyItems[0].reps).toBe(2);
+  });
+
+  it('an update that adds a cloze blank keeps the studied c1 and adds a c2 item', async () => {
+    const s = await seed();
+    await db.cards.put({ ...s.c, type: 'cloze', front: '{{c1::a}}' });
+    await db.reviewItems.put({ ...s.item, variant: 'c1' });
+    const file = await parse(await exportBackup('library', null, { includeHistory: false }));
+    file.cards = file.cards.map((c) => ({ ...c, front: '{{c1::a}} {{c2::b}}', updatedAt: c.updatedAt + 1000 }));
+    await applyImport(planImport(file, await existingMeta(), 'update', null));
+    const items = await repo.getReviewItemsForCard(s.c.id);
+    expect(items.map((i) => i.variant).sort()).toEqual(['c1', 'c2']);
+    expect(items.find((i) => i.variant === 'c1')).toMatchObject({ id: s.item.id, reps: 2 });
+  });
+
+  it('an update that suspends a card parks its items so they are never due', async () => {
+    const s = await seed();
+    const file = await parse(await exportBackup('library', null, { includeHistory: false }));
+    file.cards = file.cards.map((c) => ({ ...c, suspended: true, updatedAt: c.updatedAt + 1000 }));
+    await applyImport(planImport(file, await existingMeta(), 'update', null));
+    expect(await repo.getDueItems([s.d.id], Number.MAX_SAFE_INTEGER - 1, 10)).toEqual([]);
+    expect((await db.reviewItems.get(s.item.id))!.due).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
+  it('importing a no-history backup, then the same deck with history, leaves one item per variant', async () => {
+    const s = await seed();
+    const withHistory = await parse(await exportBackup('library', null, { includeHistory: true }));
+    const without = await parse(await exportBackup('library', null, { includeHistory: false }));
+    await db.delete();
+    await db.open();
+    await applyImport(planImport(without, await existingMeta(), 'update', null));
+    await applyImport(planImport(withHistory, await existingMeta(), 'update', null));
+    const items = await repo.getReviewItemsForCard(s.c.id);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ id: s.item.id, reps: 2 });
+    expect(await db.reviewLogs.toArray()).toEqual([s.log]);
+  });
+
+  it('share "Update my copy" gives a new cloze blank its own review item', async () => {
+    const s = await seed();
+    await db.cards.put({ ...s.c, type: 'cloze', front: '{{c1::a}}' });
+    await db.reviewItems.put({ ...s.item, variant: 'c1' });
+    const shared = { ...(await db.cards.get(s.c.id))!, front: '{{c1::a}} {{c2::b}}', updatedAt: s.c.updatedAt + 1000 };
+    const { payload } = buildSharePayload({ ...s.d, updatedAt: s.d.updatedAt + 1000 }, [shared], () => undefined);
+    await importShare(payload, 'update', null);
+    const items = await repo.getReviewItemsForCard(s.c.id);
+    expect(items.map((i) => i.variant).sort()).toEqual(['c1', 'c2']);
   });
 
   it('creates fresh review items for imported cards when the backup has no history', async () => {

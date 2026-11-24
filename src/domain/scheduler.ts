@@ -2,7 +2,8 @@ import { createEmptyCard, fsrs, generatorParameters, type Card as FsrsCard, type
 import { baseRecord, now } from './ids';
 import type { Id, Rating, ReviewItem, Variant } from './types';
 
-const SUSPENDED_DUE = Number.MAX_SAFE_INTEGER;
+/** Due value that parks suspended items beyond every due range. */
+export const SUSPENDED_DUE = Number.MAX_SAFE_INTEGER;
 const DAY_MS = 86_400_000;
 
 const fuzzScheduler = fsrs(generatorParameters({ enable_fuzz: true }));

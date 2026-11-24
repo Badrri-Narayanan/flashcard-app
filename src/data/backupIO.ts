@@ -7,10 +7,9 @@ import {
   type BackupScope,
   type MergePlan,
 } from '../domain/backup';
-import { newReviewItem } from '../domain/scheduler';
+import { reconcileImportedItems } from '../domain/importReconcile';
 import { descendantDeckIds } from '../domain/tree';
-import { variantsFor } from '../domain/variants';
-import type { Card, Deck, Folder, Id, ReviewItem } from '../domain/types';
+import type { Card, CardType, Deck, Folder, Id, ReviewItem } from '../domain/types';
 import { repo } from './repo';
 
 export const MAX_BACKUP_BYTES = 300 * 1024 * 1024;
@@ -169,16 +168,32 @@ export async function readBackupFile(file: File): Promise<BackupFile> {
   return result.file;
 }
 
-/** All-or-nothing: writes the plan, then gives any imported card with no live review items fresh ones. */
+/**
+ * All-or-nothing: writes the plan, then leaves every card it touched with one live review item per needed variant
+ * (studied local items are kept unless the file's item was reviewed later; missing variants get fresh items).
+ */
 export function applyImport(plan: MergePlan): Promise<void> {
   return repo.transaction(async () => {
-    await repo.importRecords(plan.put);
-    const created: ReviewItem[] = [];
-    for (const card of plan.put.cards) {
-      if (card.deletedAt !== null) continue;
-      if ((await repo.getReviewItemsForCard(card.id)).length > 0) continue;
-      for (const v of variantsFor(card)) created.push(newReviewItem(card.id, card.deckId, v, card.suspended));
+    const at = Date.now();
+    const cards = new Map<Id, Card>(plan.put.cards.map((c) => [c.id, c]));
+    const prevTypes = new Map<Id, CardType | null>();
+    for (const id of new Set([...cards.keys(), ...plan.put.reviewItems.map((i) => i.cardId)])) {
+      const stored = await repo.getCard(id);
+      prevTypes.set(id, stored && stored.deletedAt === null ? stored.type : null);
+      if (!cards.has(id) && stored) cards.set(id, stored);
     }
-    await repo.importRecords({ reviewItems: created });
+    const incoming = new Map<Id, ReviewItem[]>();
+    for (const i of plan.put.reviewItems) incoming.set(i.cardId, [...(incoming.get(i.cardId) ?? []), i]);
+
+    const items: ReviewItem[] = [];
+    const dropped = new Set<Id>();
+    for (const [id, card] of cards) {
+      const local = await repo.getReviewItemsForCard(id);
+      const r = reconcileImportedItems(card, prevTypes.get(id) ?? null, local, incoming.get(id) ?? [], at);
+      items.push(...r.put);
+      for (const d of r.droppedIncoming) dropped.add(d);
+    }
+    const reviewLogs = plan.put.reviewLogs.filter((l) => !dropped.has(l.reviewItemId));
+    await repo.importRecords({ ...plan.put, reviewItems: items, reviewLogs });
   });
 }
