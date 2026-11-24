@@ -23,21 +23,25 @@ interface Props {
   cramHref: string;
 }
 
+const navClass = 'min-h-11 rounded-lg px-4 font-medium hover:bg-slate-200 disabled:opacity-40 dark:hover:bg-slate-800';
+
 export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
   const s = useLearnSession(deckIds);
   const [helpOpen, setHelpOpen] = useState(false);
   const hints = useKeyHints();
   const navigate = useNavigate();
-  const { current, revealed } = s;
+  const { current, revealed, answerSeen } = s;
 
   const rate = (r: Rating) => {
-    if (revealed) void s.answer(r);
+    if (answerSeen) void s.answer(r);
   };
   const faces = current ? cardFaces(current.card, current.deck, current.item.variant) : null;
   const speakVisible = useReadAloud(faces, revealed, current ? `${current.card.id}:${current.item.variant}` : undefined);
   useStudyKeys(
     {
-      ' ': () => current && s.reveal(),
+      ' ': () => current && s.flip(),
+      ArrowRight: () => s.skip(),
+      ArrowLeft: () => void s.previous(),
       s: speakVisible,
       '1': () => rate(1),
       '2': () => rate(2),
@@ -89,17 +93,20 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
       <div className="flex flex-1 flex-col justify-center">
         {current && faces && (
           <FlipCard
+            key={s.turn}
             faces={faces}
             mnemonic={current.card.mnemonic}
             revealed={revealed}
-            onFlip={s.reveal}
-            onSwipeRate={rate}
+            onFlip={s.flip}
+            onSwipe={(dir) => (dir === 'next' ? s.skip() : void s.previous())}
+            enter={s.enter}
+            badge={s.wasSkipped ? strings.study.skipped : undefined}
           />
         )}
       </div>
       {current && (
         <div className="space-y-3 pb-2">
-          {revealed && s.intervals ? (
+          {answerSeen && s.intervals ? (
             <RatingBar intervals={s.intervals} onRate={rate} showHints={hints} />
           ) : (
             <>
@@ -114,6 +121,14 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
               </button>
             </>
           )}
+          <div className="flex justify-between">
+            <button type="button" onClick={() => void s.previous()} disabled={!s.canPrevious} className={navClass}>
+              ← {strings.study.previous}
+            </button>
+            <button type="button" onClick={s.skip} className={navClass}>
+              {strings.study.skip} →
+            </button>
+          </div>
         </div>
       )}
       <ToastRegion

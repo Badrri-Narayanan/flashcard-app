@@ -1,6 +1,5 @@
 import { useDrag } from '@use-gesture/react';
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import type { Rating } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import { useSettings } from '../settings/settings';
 import PronounceButton from '../speech/PronounceButton';
@@ -15,7 +14,12 @@ interface Props {
   mnemonic: string;
   revealed: boolean;
   onFlip(): void;
-  onSwipeRate?(rating: Rating): void;
+  /** Swipe left = next card, swipe right = previous card. */
+  onSwipe?(direction: 'next' | 'prev'): void;
+  /** Which way the card slid in from, for the entrance animation. */
+  enter?: CardEnter;
+  /** Small label above the card, e.g. that it was skipped earlier. */
+  badge?: string;
 }
 
 /** `shown` is false for the face hidden by the flip: it keeps its text but holds no reachable controls. */
@@ -71,13 +75,20 @@ function AnimatedFace({ hidden, className, live, children }: { hidden: boolean; 
   );
 }
 
-const faceClass = 'min-h-48 w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900';
+const faceClass =
+  'min-h-56 w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-md dark:border-slate-700 dark:bg-slate-900';
 
-export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRate }: Props) {
+export type CardEnter = 'next' | 'prev' | null;
+
+/** Springy ease: the card overshoots a touch and settles, like a real card being turned over. */
+const FLIP_EASE = 'cubic-bezier(0.34, 1.3, 0.64, 1)';
+
+export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipe, enter = null, badge }: Props) {
   const [{ swipeGestures, flipAnimation }] = useSettings();
   const reduced = usePrefersReducedMotion();
   const animate = flipAnimation && !reduced;
   const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const dragged = useRef(false);
 
   const bind = useDrag(
@@ -86,13 +97,14 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
       if (tap) return;
       dragged.current = true;
       if (active) {
+        setDragging(true);
         setDx(mx);
         return;
       }
+      setDragging(false);
       setDx(0);
-      const decision = swipeDecision(mx, revealed);
-      if (decision === 'flip') onFlip();
-      else if (decision !== null) onSwipeRate?.(decision);
+      const decision = swipeDecision(mx);
+      if (decision) onSwipe?.(decision);
     },
     { enabled: swipeGestures, axis: 'x', filterTaps: true },
   );
@@ -108,60 +120,85 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
   };
 
   const progress = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD_PX);
-  const showOverlay = swipeGestures && revealed && dx !== 0;
-  const good = dx > 0;
+  const showHint = swipeGestures && !!onSwipe && dx !== 0;
   const style = {
     touchAction: 'pan-y' as const,
-    transform: dx !== 0 && !reduced ? `translateX(${dx}px) rotate(${dx / 25}deg)` : undefined,
+    transform: dx !== 0 && !reduced ? `translateX(${dx}px) rotate(${dx / 20}deg)` : undefined,
+    transition: dragging || reduced ? 'none' : 'transform 250ms ease-out',
   };
+  const enterClass = animate && enter ? (enter === 'next' ? 'animate-card-in-next' : 'animate-card-in-prev') : '';
 
   return (
     <div className="relative">
-      <button type="button" onClick={onFlip} className="sr-only focus:not-sr-only focus:mb-2 focus:rounded focus:bg-slate-200 focus:px-2 focus:py-1 focus:text-sm dark:focus:bg-slate-800">
-        {strings.study.flipCard}
-      </button>
-    <div
-      {...bind()}
-      role="region"
-      aria-label={strings.study.card}
-      onClick={handleClick}
-      style={style}
-      className="relative cursor-pointer select-none"
-    >
-      {animate ? (
-        <div className="[perspective:1200px]">
-          <div
-            className="grid transition-transform duration-300 [transform-style:preserve-3d]"
-            style={{ transform: revealed ? 'rotateY(180deg)' : 'none' }}
-          >
-            <AnimatedFace hidden={revealed} className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1]`}>
-              <FrontFace faces={faces} shown={!revealed} />
-            </AnimatedFace>
-            <AnimatedFace
-              hidden={!revealed}
-              live
-              className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1] [transform:rotateY(180deg)]`}
-            >
-              <BackFace faces={faces} mnemonic={mnemonic} shown={revealed} />
-            </AnimatedFace>
-          </div>
-        </div>
-      ) : (
-        <div aria-live="polite" className={faceClass}>{revealed ? <BackFace faces={faces} mnemonic={mnemonic} shown /> : <FrontFace faces={faces} shown />}</div>
+      {badge && (
+        <p className="mb-2 text-center">
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900 dark:bg-amber-900 dark:text-amber-100">
+            {badge}
+          </span>
+        </p>
       )}
-      {showOverlay && (
+      <div className={enterClass}>
         <div
-          aria-hidden
-          data-testid="swipe-overlay"
-          style={{ opacity: progress * 0.6 }}
-          className={`pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl text-3xl font-bold text-white ${
-            good ? 'bg-emerald-700' : 'bg-rose-700'
-          }`}
+          {...bind()}
+          role="region"
+          aria-label={strings.study.card}
+          onClick={handleClick}
+          style={style}
+          className="relative cursor-pointer select-none"
         >
-          {good ? strings.study.swipeGood : strings.study.swipeAgain}
+          {animate ? (
+            <div className="[perspective:1400px]">
+              <div
+                className="grid [transform-style:preserve-3d]"
+                style={{
+                  transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                  transition: `transform 650ms ${FLIP_EASE}`,
+                }}
+              >
+                <AnimatedFace hidden={revealed} className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1]`}>
+                  <FrontFace faces={faces} shown={!revealed} />
+                </AnimatedFace>
+                <AnimatedFace
+                  hidden={!revealed}
+                  live
+                  className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1] [transform:rotateY(180deg)]`}
+                >
+                  <BackFace faces={faces} mnemonic={mnemonic} shown={revealed} />
+                </AnimatedFace>
+              </div>
+            </div>
+          ) : (
+            <div aria-live="polite" className={faceClass}>
+              {revealed ? <BackFace faces={faces} mnemonic={mnemonic} shown /> : <FrontFace faces={faces} shown />}
+            </div>
+          )}
+          {showHint && (
+            <div
+              aria-hidden
+              data-testid="swipe-hint"
+              style={{ opacity: progress }}
+              className={`pointer-events-none absolute top-3 rounded-full bg-slate-900/80 px-3 py-1 text-sm font-semibold text-white ${
+                dx < 0 ? 'end-3' : 'start-3'
+              }`}
+            >
+              {dx < 0 ? `${strings.study.swipeNext} →` : `← ${strings.study.swipePrev}`}
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+      <div className="mt-3 flex justify-center">
+        <button
+          type="button"
+          onClick={onFlip}
+          aria-label={strings.study.flipCard}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-300 bg-white px-5 text-sm font-medium shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+        >
+          <span aria-hidden className={`inline-block ${animate ? 'transition-transform duration-500' : ''} ${revealed ? 'rotate-180' : ''}`}>
+            ↻
+          </span>
+          {strings.study.flip}
+        </button>
+      </div>
     </div>
   );
 }

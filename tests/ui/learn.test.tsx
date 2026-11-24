@@ -55,6 +55,15 @@ function renderAt(path: string, settings: Partial<AppSettings> = {}) {
   return router;
 }
 
+function swipe(card: HTMLElement, fromX: number, toX: number) {
+  const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientY: 100 };
+  const mid = (fromX + toX) / 2;
+  fireEvent.pointerDown(card, { ...pointer, clientX: fromX });
+  fireEvent.pointerMove(card, { ...pointer, clientX: mid });
+  fireEvent.pointerMove(card, { ...pointer, clientX: toX });
+  fireEvent.pointerUp(card, { ...pointer, buttons: 0, clientX: toX });
+}
+
 async function currentQuestion(): Promise<string> {
   const el = await screen.findByText(/^question \d$/);
   return el.textContent ?? '';
@@ -101,37 +110,63 @@ describe('learn mode', () => {
     expect((await repo.listLogs())[0]).toMatchObject({ rating: 2, correct: true });
   });
 
-  it('swipe left after reveal rates Again', async () => {
+  it('flips back to the question after revealing, and can still be rated', async () => {
     const user = userEvent.setup();
     const { deck } = await seed(2);
     renderAt(`/study/deck/${deck.id}/learn`);
-    await currentQuestion();
+    const first = await currentQuestion();
     await user.keyboard(' ');
-    await screen.findByRole('group', { name: 'Rate your answer' });
-
-    const card = screen.getByRole('region', { name: 'Card' });
-    const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientY: 100 };
-    fireEvent.pointerDown(card, { ...pointer, clientX: 220 });
-    fireEvent.pointerMove(card, { ...pointer, clientX: 150 });
-    fireEvent.pointerMove(card, { ...pointer, clientX: 100 });
-    fireEvent.pointerUp(card, { ...pointer, buttons: 0, clientX: 100 });
-
+    expect(await screen.findByText(first.replace('question', 'answer'))).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Flip card' }));
+    expect(await screen.findByText(first)).toBeInTheDocument();
+    expect(screen.queryByText(first.replace('question', 'answer'))).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Rate your answer' })).toBeInTheDocument();
+    await user.keyboard(' ');
+    expect(await screen.findByText(first.replace('question', 'answer'))).toBeInTheDocument();
+    await user.keyboard('3');
     await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
-    expect((await repo.listLogs())[0]).toMatchObject({ rating: 1, correct: false });
   });
 
-  it('swipe before reveal only flips', async () => {
-    const { deck } = await seed(1);
+  it('swipe left skips to the next card without rating; the skipped card comes back marked', async () => {
+    const { deck } = await seed(2);
     renderAt(`/study/deck/${deck.id}/learn`);
-    await currentQuestion();
-    const card = screen.getByRole('region', { name: 'Card' });
-    const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientY: 100 };
-    fireEvent.pointerDown(card, { ...pointer, clientX: 100 });
-    fireEvent.pointerMove(card, { ...pointer, clientX: 160 });
-    fireEvent.pointerMove(card, { ...pointer, clientX: 220 });
-    fireEvent.pointerUp(card, { ...pointer, buttons: 0, clientX: 220 });
-    expect(await screen.findByRole('group', { name: 'Rate your answer' })).toBeInTheDocument();
+    const first = await currentQuestion();
+    swipe(screen.getByRole('region', { name: 'Card' }), 220, 100);
+    await waitFor(async () => expect(await currentQuestion()).not.toBe(first));
+    expect(screen.queryByText('Skipped earlier')).not.toBeInTheDocument();
+    swipe(screen.getByRole('region', { name: 'Card' }), 220, 100);
+    await waitFor(async () => expect(await currentQuestion()).toBe(first));
+    expect(screen.getByText('Skipped earlier')).toBeInTheDocument();
     expect(await repo.listLogs()).toHaveLength(0);
+  });
+
+  it('arrow keys skip forward and bring the skipped card back', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(3);
+    renderAt(`/study/deck/${deck.id}/learn`);
+    const first = await currentQuestion();
+    expect(screen.getByRole('button', { name: /Previous/ })).toBeDisabled();
+    await user.keyboard('{ArrowRight}');
+    await waitFor(async () => expect(await currentQuestion()).not.toBe(first));
+    await user.keyboard('{ArrowLeft}');
+    await waitFor(async () => expect(await currentQuestion()).toBe(first));
+    expect(screen.getByText('Skipped earlier')).toBeInTheDocument();
+    expect(await repo.listLogs()).toHaveLength(0);
+  });
+
+  it('Previous after rating goes back to that card and undoes the rating', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(2);
+    renderAt(`/study/deck/${deck.id}/learn`);
+    const first = await currentQuestion();
+    await user.keyboard(' ');
+    await user.keyboard('4');
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
+    await waitFor(async () => expect(await currentQuestion()).not.toBe(first));
+    swipe(screen.getByRole('region', { name: 'Card' }), 100, 220);
+    await waitFor(async () => expect(await currentQuestion()).toBe(first));
+    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(0));
+    expect(await screen.findByText('Went back — that rating was undone')).toBeInTheDocument();
   });
 
   it('undo restores the previous item state and removes the log', async () => {
@@ -399,7 +434,7 @@ describe('learn mode: review fixes', () => {
 });
 
 describe('cram mode', () => {
-  it('double-tapping Got it writes one log; swiping right marks Got it', async () => {
+  it('double-tapping Got it writes one log', async () => {
     const user = userEvent.setup();
     const { deck } = await seed(3);
     renderAt(`/study/deck/${deck.id}/cram`);
@@ -409,18 +444,23 @@ describe('cram mode', () => {
     await waitFor(async () => expect(await repo.listLogs()).toHaveLength(1));
     await new Promise((r) => setTimeout(r, 50));
     expect(await repo.listLogs()).toHaveLength(1);
+  });
 
-    await currentQuestion();
+  it('swipes move between cards, and a skipped card is revisited before the session ends', async () => {
+    const user = userEvent.setup();
+    const { deck } = await seed(2);
+    renderAt(`/study/deck/${deck.id}/cram`);
+    const first = await currentQuestion();
+    swipe(screen.getByRole('region', { name: 'Card' }), 220, 100);
+    await waitFor(async () => expect(await currentQuestion()).not.toBe(first));
     await user.keyboard(' ');
-    await screen.findByRole('button', { name: 'Got it' });
-    const card = screen.getByRole('region', { name: 'Card' });
-    const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientY: 100 };
-    fireEvent.pointerDown(card, { ...pointer, clientX: 100 });
-    fireEvent.pointerMove(card, { ...pointer, clientX: 160 });
-    fireEvent.pointerMove(card, { ...pointer, clientX: 220 });
-    fireEvent.pointerUp(card, { ...pointer, buttons: 0, clientX: 220 });
-    await waitFor(async () => expect(await repo.listLogs()).toHaveLength(2));
-    expect((await repo.listLogs()).every((l) => l.correct)).toBe(true);
+    await user.click(await screen.findByRole('button', { name: 'Got it' }));
+    await waitFor(async () => expect(await currentQuestion()).toBe(first));
+    expect(screen.getByText(/^Skipped/)).toBeInTheDocument();
+    await user.keyboard(' ');
+    await user.click(await screen.findByRole('button', { name: 'Got it' }));
+    expect(await screen.findByText('Session complete')).toBeInTheDocument();
+    expect(await repo.listLogs()).toHaveLength(2);
   });
 
   it('writes cram logs with null rating and never changes review items', async () => {
@@ -499,12 +539,11 @@ describe('study home', () => {
 });
 
 describe('pure helpers', () => {
-  it('swipeDecision: 80px threshold, flip before reveal', () => {
-    expect(swipeDecision(79, true)).toBeNull();
-    expect(swipeDecision(80, true)).toBe(3);
-    expect(swipeDecision(-80, true)).toBe(1);
-    expect(swipeDecision(-200, false)).toBe('flip');
-    expect(swipeDecision(30, false)).toBeNull();
+  it('swipeDecision: 80px threshold; left is next, right is previous', () => {
+    expect(swipeDecision(79)).toBeNull();
+    expect(swipeDecision(-79)).toBeNull();
+    expect(swipeDecision(-80)).toBe('next');
+    expect(swipeDecision(80)).toBe('prev');
   });
 
   it('cardFaces: reverse variant shows the back first; languages fall back to the deck', () => {

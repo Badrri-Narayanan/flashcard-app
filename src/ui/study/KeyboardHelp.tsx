@@ -10,7 +10,7 @@ export default function KeyboardHelp({ mode, onClose }: Props) {
   const k = strings.study.keys;
   const help = ['?', k.help];
   const rowsByMode: Record<Props['mode'], string[][]> = {
-    learn: [['Space', k.flip], ['1 2 3 4', k.rate], ['Z', k.undo], ['S', k.speak], help],
+    learn: [['Space', k.flip], ['1 2 3 4', k.rate], ['← →', k.learnNav], ['Z', k.undo], ['S', k.speak], help],
     cram: [['Space', k.flip], ['1 / 3', k.cramMark], ['← →', k.cramNav], ['S', k.speak], help],
     quiz: [['1 2 3 4', k.quizPick], ['Enter / Space', k.quizNext], help],
     type: [['Enter', k.typeCheck], ['R', k.typeOverride], help],

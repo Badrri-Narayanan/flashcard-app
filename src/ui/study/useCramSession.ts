@@ -26,6 +26,10 @@ export interface CramSession {
   index: number;
   current: CramEntry | null;
   revealed: boolean;
+  /** The direction the current card arrived from. */
+  enter: 'next' | 'prev' | null;
+  /** The current card was passed over earlier without a mark. */
+  wasSkipped: boolean;
   flip(): void;
   next(): void;
   prev(): void;
@@ -43,6 +47,9 @@ export function useCramSession(deckIds: Id[]): CramSession {
   const [entries, setEntries] = useState<CramEntry[] | null>(null);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [enter, setEnter] = useState<'next' | 'prev' | null>(null);
+  const [marked, setMarked] = useState<ReadonlySet<number>>(() => new Set());
+  const [skipped, setSkipped] = useState<ReadonlySet<number>>(() => new Set());
   const [marks, setMarks] = useState<{ correct: boolean; ms: number }[]>([]);
   const [finished, setFinished] = useState(false);
   const shownAt = useRef(0);
@@ -72,11 +79,21 @@ export function useCramSession(deckIds: Id[]): CramSession {
   }, [deckKey]);
 
   const list = useMemo(() => entries ?? [], [entries]);
-  const go = useCallback((to: number) => {
+  const go = useCallback((to: number, direction: 'next' | 'prev') => {
     setIndex(to);
     setRevealed(false);
+    setEnter(direction);
     shownAt.current = Date.now();
   }, []);
+
+  /** Moving on from a card without marking it remembers it as skipped. */
+  const leave = useCallback(
+    (to: number, direction: 'next' | 'prev') => {
+      if (!marked.has(index)) setSkipped((prev) => new Set(prev).add(index));
+      go(to, direction);
+    },
+    [marked, index, go],
+  );
 
   const mark = useCallback(
     async (correct: boolean) => {
@@ -104,8 +121,19 @@ export function useCramSession(deckIds: Id[]): CramSession {
           await repo.saveReview(null, log);
         }
         setMarks((m) => [...m, { correct, ms: durationMs }]);
-        if (index + 1 >= list.length) setFinished(true);
-        else go(index + 1);
+        const nowMarked = new Set(marked).add(index);
+        setMarked(nowMarked);
+        setSkipped((prev) => {
+          if (!prev.has(index)) return prev;
+          const rest = new Set(prev);
+          rest.delete(index);
+          return rest;
+        });
+        // Move on to the next unmarked card, coming back round to any that were skipped.
+        const after = list.findIndex((_, i) => i > index && !nowMarked.has(i));
+        const target = after >= 0 ? after : list.findIndex((_, i) => !nowMarked.has(i));
+        if (target >= 0) go(target, 'next');
+        else setFinished(true);
       } catch (err) {
         console.error('Failed to save cram result', err);
         setNotice({ id: ++noticeId.current, message: strings.study.saveFailed });
@@ -113,7 +141,7 @@ export function useCramSession(deckIds: Id[]): CramSession {
         busy.current = false;
       }
     },
-    [list, index, dayStartHour, go],
+    [list, index, dayStartHour, go, marked],
   );
 
   return {
@@ -122,13 +150,15 @@ export function useCramSession(deckIds: Id[]): CramSession {
     index,
     current: list[index] ?? null,
     revealed,
+    enter,
+    wasSkipped: skipped.has(index) && !marked.has(index),
     flip: useCallback(() => setRevealed((r) => !r), []),
     next: useCallback(() => {
-      if (index + 1 < list.length) go(index + 1);
-    }, [index, list.length, go]),
+      if (index + 1 < list.length) leave(index + 1, 'next');
+    }, [index, list.length, leave]),
     prev: useCallback(() => {
-      if (index > 0) go(index - 1);
-    }, [index, go]),
+      if (index > 0) leave(index - 1, 'prev');
+    }, [index, leave]),
     mark,
     notice,
     clearNotice: () => setNotice(null),
