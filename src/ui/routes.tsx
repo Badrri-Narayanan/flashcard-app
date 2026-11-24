@@ -9,10 +9,12 @@ import TroublePage from './trouble/TroublePage';
 import ImportPage from './import/ImportPage';
 import StatsPage from './stats/StatsPage';
 import SharePreviewPage from './share/SharePreviewPage';
+import PrintPage from './print/PrintPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 
 /** Later tasks add their routes here, before the catch-all. */
 export const routes: RouteObject[] = [
+  { path: '/print/:deckId/:layout?', element: <PrintPage /> },
   {
     element: <AppShell />,
     children: [

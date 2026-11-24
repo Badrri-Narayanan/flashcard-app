@@ -1,0 +1,59 @@
+.print-root {
+  --sheet-h: 277mm;
+  --sheet-w: 190mm;
+}
+.print-root[data-paper='letter'] {
+  --sheet-h: 259.4mm;
+  --sheet-w: 195.9mm;
+}
+.print-sheet {
+  inline-size: var(--sheet-w);
+  margin-inline: auto;
+  margin-block: 1rem;
+  background: white;
+  color: black;
+  padding: 0;
+  break-after: page;
+}
+.print-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  block-size: var(--sheet-h);
+}
+.print-cell {
+  border: 1px dashed #777;
+  padding: 6mm;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  break-inside: avoid;
+}
+.print-doc {
+  padding: 4mm;
+  color: black;
+  background: white;
+}
+.print-line {
+  border-block-end: 1px solid #333;
+  block-size: 8mm;
+}
+.print-item {
+  break-inside: avoid;
+  margin-block-end: 6mm;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-sheet,
+  .print-doc {
+    margin: 0;
+    inline-size: auto;
+  }
+  body {
+    background: white;
+  }
+}
