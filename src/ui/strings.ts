@@ -244,7 +244,7 @@ export const strings = {
     importFileHint: 'Bring in a CSV or a backup file.',
     sample: 'Try a sample deck',
     sampleHint: 'Explore the app with ready-made cards.',
-    comingSoon: 'Coming soon',
+    sampleFailed: 'Could not add the sample decks. Please try again.',
   },
   bulk: {
     title: 'Paste a list',
@@ -605,5 +605,17 @@ export const strings = {
     errorTruncated: 'This link looks incomplete; it may have been cut off when it was copied or sent. Ask for the link again.',
     errorInvalid: 'This link is not a valid share link.',
     errorTitle: 'Link problem',
+  },
+  pwa: {
+    updateAvailable: 'New version available',
+    reload: 'Reload',
+    storageFull: 'Your device storage is full, so changes may not be saved. Export a backup and free up some space.',
+    storageUnavailable: 'The app cannot open its storage on this device, so your cards may not load or save.',
+    exportBackup: 'Export backup',
+    exportFailed: 'The backup could not be created. Try freeing up space on your device, then try again.',
+    reminderTitle: (cards: number) => `You have ${cards} cards and no recent backup. Back up your library to keep them safe.`,
+    backUpNow: 'Back up now',
+    remindLater: 'Remind me later',
+    backupFailed: 'The backup could not be created. Try freeing up space, then try again.',
   },
 } as const;

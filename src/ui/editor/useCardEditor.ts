@@ -4,6 +4,7 @@ import { storeImage } from '../../data/media';
 import { repo } from '../../data/repo';
 import { baseRecord } from '../../domain/ids';
 import type { Card, Id } from '../../domain/types';
+import { useStorageErrors } from '../components/storageError';
 import { strings } from '../strings';
 import { EMPTY_FORM, insertAt, mergeTags, validate, wrapBlank, type EditorForm } from './editorLogic';
 
@@ -25,6 +26,7 @@ const formOf = (c: Card): EditorForm => ({
 /** State and actions for the card editor screen (new card when cardId is undefined). */
 export function useCardEditor(deckId: Id, cardId: Id | undefined) {
   const navigate = useNavigate();
+  const { reportStorageError } = useStorageErrors();
   const [state, setState] = useState<LoadState>('loading');
   const [form, setForm] = useState<EditorForm>(EMPTY_FORM);
   const [baseline, setBaseline] = useState<EditorForm>(EMPTY_FORM);
@@ -107,6 +109,7 @@ export function useCardEditor(deckId: Id, cardId: Id | undefined) {
       await repo.saveCard(card);
     } catch (err) {
       console.error('Failed to save card', err);
+      reportStorageError(err);
       setSaveError(true);
       setSaving(false);
       return;

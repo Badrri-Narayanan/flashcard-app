@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { SAMPLE_FOLDER_ID, seedSampleDecks } from '../../data/seed';
 import { strings } from '../strings';
 
 interface Props {
@@ -11,6 +13,19 @@ const hint = 'text-sm font-normal text-slate-600 dark:text-slate-400';
 
 export default function OnboardingEmpty({ onCreateDeck }: Props) {
   const o = strings.onboarding;
+  const navigate = useNavigate();
+  const [sampleFailed, setSampleFailed] = useState(false);
+
+  async function trySample() {
+    setSampleFailed(false);
+    try {
+      await seedSampleDecks();
+      navigate(`/folder/${SAMPLE_FOLDER_ID}`);
+    } catch (err) {
+      console.error('Failed to add sample decks', err);
+      setSampleFailed(true);
+    }
+  }
   return (
     <section className="mx-auto max-w-xl py-8 text-center">
       <h2 className="text-xl font-bold">{o.title}</h2>
@@ -28,12 +43,12 @@ export default function OnboardingEmpty({ onCreateDeck }: Props) {
           <span id="ob-importFile" className="font-semibold">{o.importFile}</span>
           <span id="ob-importFile-hint" className={hint}>{o.importFileHint}</span>
         </Link>
-        <button type="button" disabled aria-labelledby="ob-sample" aria-describedby="ob-sample-hint" title={o.comingSoon} className={`${card} cursor-not-allowed opacity-60`}>
+        <button type="button" onClick={trySample} aria-labelledby="ob-sample" aria-describedby="ob-sample-hint" className={`${card} hover:bg-slate-50 dark:hover:bg-slate-800`}>
           <span id="ob-sample" className="font-semibold">{o.sample}</span>
           <span id="ob-sample-hint" className={hint}>{o.sampleHint}</span>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{o.comingSoon}</span>
         </button>
       </div>
+      {sampleFailed && <p role="alert" className="mt-3 text-sm text-rose-600">{o.sampleFailed}</p>}
     </section>
   );
 }

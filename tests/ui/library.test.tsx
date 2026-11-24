@@ -102,8 +102,7 @@ describe('library', () => {
     expect(screen.getByRole('link', { name: 'Paste a list' })).toHaveAttribute('href', '/import?mode=paste');
     expect(screen.getByRole('link', { name: 'Import a file' })).toHaveAttribute('href', '/import');
     const sample = screen.getByRole('button', { name: 'Try a sample deck' });
-    expect(sample).toBeDisabled();
-    expect(sample).toHaveAttribute('title', 'Coming soon');
+    expect(sample).toBeEnabled();
   });
 
   it('moving folder into its own child is rejected', async () => {

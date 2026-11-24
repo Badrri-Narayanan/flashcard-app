@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import BackupReminder from '../components/BackupReminder';
+import StorageBanner from '../components/StorageBanner';
+import UpdatePrompt from '../components/UpdatePrompt';
 import { strings } from '../strings';
 
 const icon = {
@@ -70,8 +73,11 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 md:flex dark:bg-slate-950 dark:text-slate-100">
       <main tabIndex={-1} className="min-w-0 flex-1 pb-24 outline-none md:pb-8">
+        <StorageBanner />
+        <BackupReminder />
         <Outlet />
       </main>
+      <UpdatePrompt />
       <nav
         aria-label={strings.nav.main}
         className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:static md:order-first md:w-56 md:shrink-0 md:flex-col md:gap-1 md:border-e md:border-t-0 md:p-3 dark:border-slate-800 dark:bg-slate-900"

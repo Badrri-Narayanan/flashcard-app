@@ -6,6 +6,7 @@ import { onAfterLearnReview } from '../../domain/leech';
 import { requeue } from '../../domain/queue';
 import { previewIntervals, rate } from '../../domain/scheduler';
 import type { Card, Confidence, Deck, Id, Rating, ReviewItem, ReviewLog } from '../../domain/types';
+import { useStorageErrors } from '../components/storageError';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { hasUnseenNew, loadLearnQueue } from './loadLearnQueue';
@@ -69,6 +70,7 @@ const isLive = (r: { deletedAt: number | null } | undefined): boolean => !!r && 
 const recentCardLogs = (card: Card): Promise<ReviewLog[]> => repo.listLogsForCard(card.id, RECENT_LOG_LIMIT);
 
 export function useLearnSession(deckIds: Id[]): LearnSession {
+  const { reportStorageError } = useStorageErrors();
   const [{ dayStartHour }] = useSettings();
   const deckKey = deckIds.join(',');
   const [loaded, setLoaded] = useState(false);
@@ -220,13 +222,14 @@ export function useLearnSession(deckIds: Id[]): LearnSession {
         }
       } catch (err) {
         console.error('Failed to save review', err);
+        reportStorageError(err);
         answeredItem.current = null;
         showNotice(strings.study.saveFailed);
       } finally {
         busy.current = false;
       }
     },
-    [current, queue, confidence, dayStartHour, showNotice],
+    [current, queue, confidence, dayStartHour, showNotice, reportStorageError],
   );
 
   const undo = useCallback(async () => {
