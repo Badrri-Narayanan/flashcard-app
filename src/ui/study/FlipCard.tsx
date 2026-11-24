@@ -18,30 +18,31 @@ interface Props {
   onSwipeRate?(rating: Rating): void;
 }
 
-function SpokenPart({ text, lang, pronounce }: { text: string; lang: string; pronounce: boolean }) {
+/** `shown` is false for the face hidden by the flip: it keeps its text but holds no reachable controls. */
+function SpokenPart({ text, lang, pronounce, shown }: { text: string; lang: string; pronounce: boolean; shown: boolean }) {
   return (
     <>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <CardContent markdown={text} lang={lang} />
         </div>
-        <SpeakButton text={text} lang={lang} />
+        {shown && <SpeakButton text={text} lang={lang} />}
       </div>
-      {pronounce && <PronounceButton target={text} lang={lang} />}
+      {shown && pronounce && <PronounceButton target={text} lang={lang} />}
     </>
   );
 }
 
-function FrontFace({ faces }: Pick<Props, 'faces'>) {
-  return <SpokenPart text={faces.front.text} lang={faces.front.lang} pronounce={false} />;
+function FrontFace({ faces, shown }: Pick<Props, 'faces'> & { shown: boolean }) {
+  return <SpokenPart text={faces.front.text} lang={faces.front.lang} pronounce={false} shown={shown} />;
 }
 
-function BackFace({ faces, mnemonic }: Pick<Props, 'faces' | 'mnemonic'>) {
+function BackFace({ faces, mnemonic, shown }: Pick<Props, 'faces' | 'mnemonic'> & { shown: boolean }) {
   return (
     <div className="space-y-3">
       {faces.back.map((part, i) => (
         <div key={i} className={i > 0 ? 'border-t border-slate-200 pt-3 dark:border-slate-700' : ''}>
-          <SpokenPart text={part.text} lang={part.lang} pronounce />
+          <SpokenPart text={part.text} lang={part.lang} pronounce shown={shown} />
         </div>
       ))}
       {mnemonic.trim() && (
@@ -116,19 +117,19 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
             style={{ transform: revealed ? 'rotateY(180deg)' : 'none' }}
           >
             <div aria-hidden={revealed} className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1]`}>
-              <FrontFace faces={faces} />
+              <FrontFace faces={faces} shown={!revealed} />
             </div>
             <div
               aria-hidden={!revealed}
               aria-live="polite"
               className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1] [transform:rotateY(180deg)]`}
             >
-              <BackFace faces={faces} mnemonic={mnemonic} />
+              <BackFace faces={faces} mnemonic={mnemonic} shown={revealed} />
             </div>
           </div>
         </div>
       ) : (
-        <div aria-live="polite" className={faceClass}>{revealed ? <BackFace faces={faces} mnemonic={mnemonic} /> : <FrontFace faces={faces} />}</div>
+        <div aria-live="polite" className={faceClass}>{revealed ? <BackFace faces={faces} mnemonic={mnemonic} shown /> : <FrontFace faces={faces} shown />}</div>
       )}
       {showOverlay && (
         <div

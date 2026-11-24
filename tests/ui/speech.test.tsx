@@ -343,3 +343,31 @@ describe('type and quiz prompts', () => {
     expect(spoken[0]).toMatchObject({ text: 'the question', lang: 'en-US' });
   });
 });
+
+describe('animated flip card (both faces mounted)', () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+    installSynthesis();
+    installRecognition(() => undefined);
+  });
+
+  const reachable = (name: string) => screen.queryAllByRole('button', { name, hidden: true });
+
+  it('only the shown face holds speak and pronounce controls, before and after reveal', async () => {
+    const user = userEvent.setup();
+    const deck = await seedOne();
+    renderAt(`/study/deck/${deck.id}/learn`, { flipAnimation: true });
+    await screen.findAllByText('the question');
+
+    expect(reachable('Read aloud')).toHaveLength(1);
+    expect(reachable('Check pronunciation')).toHaveLength(0);
+
+    await user.keyboard(' ');
+    await waitFor(() => expect(reachable('Check pronunciation')).toHaveLength(2));
+    expect(reachable('Read aloud')).toHaveLength(2);
+    // The front face's own speak button is gone: only the two back parts remain.
+    const front = screen.getAllByText('the question')[0].closest('[aria-hidden]');
+    expect(front?.querySelectorAll('button')).toHaveLength(0);
+  });
+});
