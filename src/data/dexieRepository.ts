@@ -203,6 +203,12 @@ export class DexieRepository implements Repository {
     return (await this.db.cards.toArray()).filter(isLive);
   }
 
+  async countCards(): Promise<number> {
+    // null is not indexable, so live = all rows minus rows with a numeric deletedAt.
+    const [all, deleted] = await Promise.all([this.db.cards.count(), this.db.cards.where('deletedAt').above(0).count()]);
+    return all - deleted;
+  }
+
   async getCard(id: Id): Promise<Card | undefined> {
     return this.db.cards.get(id);
   }

@@ -322,6 +322,21 @@ describe('DexieRepository', () => {
   });
 });
 
+describe('countCards', () => {
+  it('counts live cards and excludes soft-deleted ones', async () => {
+    const d = mkDeck();
+    await repo.saveDeck(d);
+    expect(await repo.countCards()).toBe(0);
+    const cards = [mkCard(d.id), mkCard(d.id), mkCard(d.id)];
+    await repo.saveCards(cards);
+    expect(await repo.countCards()).toBe(3);
+    await repo.deleteCards([cards[0].id]);
+    expect(await repo.countCards()).toBe(2);
+    await repo.restoreCards([cards[0].id]);
+    expect(await repo.countCards()).toBe(3);
+  });
+});
+
 describe('resetAll', () => {
   it('clears every table including kv in one go', async () => {
     const deck = mkDeck();

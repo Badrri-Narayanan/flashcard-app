@@ -39,6 +39,8 @@ export interface Repository {
   listCards(deckId: Id): Promise<Card[]>;
   /** All non-deleted cards across decks; for building the global search index. */
   listAllCards(): Promise<Card[]>;
+  /** Number of non-deleted cards, counted from indexes without loading rows. */
+  countCards(): Promise<number>;
   /** Returns soft-deleted rows too, so Undo can find them. */
   getCard(id: Id): Promise<Card | undefined>;
   saveCard(card: Card): Promise<void>;

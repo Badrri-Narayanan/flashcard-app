@@ -135,7 +135,7 @@ describe('BackupReminder', () => {
   it('stays hidden below 50 cards', async () => {
     await seedCards(49);
     render(<BackupReminder />);
-    await waitFor(() => expect(repo.listAllCards()).resolves.toHaveLength(49));
+    await waitFor(() => expect(repo.countCards()).resolves.toBe(49));
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
@@ -150,6 +150,23 @@ describe('BackupReminder', () => {
     await repo.setKV('lastBackupAt', Date.now() - 15 * DAY);
     render(<BackupReminder />);
     expect(await screen.findByRole('status')).toBeInTheDocument();
+  });
+
+  it('does not touch the card table when the backup is recent or snoozed', async () => {
+    await seedCards(50);
+    const list = vi.spyOn(repo, 'listAllCards');
+    const count = vi.spyOn(repo, 'countCards');
+    await repo.setKV('lastBackupAt', Date.now() - DAY);
+    const first = render(<BackupReminder />);
+    await act(() => new Promise((r) => setTimeout(r, 50)));
+    first.unmount();
+
+    await repo.setKV('lastBackupAt', Date.now() - 30 * DAY);
+    await repo.setKV('backupSnoozeUntil', Date.now() + DAY);
+    render(<BackupReminder />);
+    await act(() => new Promise((r) => setTimeout(r, 50)));
+    expect(list).not.toHaveBeenCalled();
+    expect(count).not.toHaveBeenCalled();
   });
 
   it('dismiss snoozes for 7 days', async () => {

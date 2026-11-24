@@ -18,11 +18,12 @@ export default function BackupReminder() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [all, last, snoozeUntil] = await Promise.all([repo.listAllCards(), getLastBackupAt(), repo.getKV<number>(SNOOZE_KEY)]);
+      const [last, snoozeUntil] = await Promise.all([getLastBackupAt(), repo.getKV<number>(SNOOZE_KEY)]);
       const now = Date.now();
-      const stale = last === null || now - last > STALE_AFTER_MS;
-      const snoozed = typeof snoozeUntil === 'number' && snoozeUntil > now;
-      if (!cancelled && all.length >= MIN_CARDS && stale && !snoozed) setCards(all.length);
+      if (last !== null && now - last <= STALE_AFTER_MS) return;
+      if (typeof snoozeUntil === 'number' && snoozeUntil > now) return;
+      const count = await repo.countCards();
+      if (!cancelled && count >= MIN_CARDS) setCards(count);
     })().catch((err: unknown) => console.error('Failed to check backup reminder', err));
     return () => {
       cancelled = true;
