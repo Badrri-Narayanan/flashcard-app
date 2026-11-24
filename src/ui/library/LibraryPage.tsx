@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { type TreeNode } from '../../domain/tree';
 import type { Deck, Folder, Id } from '../../domain/types';
+import GoalRing from '../components/GoalRing';
 import ToastRegion from '../components/ToastRegion';
 import { useLibrary } from '../hooks/useLibrary';
 import { useLibraryActions, type MoveTarget } from '../hooks/useLibraryActions';
@@ -116,9 +117,12 @@ export default function LibraryPage() {
           </nav>
         )}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold">
-            {scope ? `${scope.emoji} ${scope.name}` : strings.library.title}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">
+              {scope ? `${scope.emoji} ${scope.name}` : strings.library.title}
+            </h1>
+            <GoalRing />
+          </div>
           <div className="flex flex-wrap gap-2">
             <ExportMenu scope={id ? 'folder' : 'library'} id={id ?? null} />
             <button type="button" onClick={() => setDialog({ type: 'folder' })} className={secondary}>{strings.library.newFolder}</button>

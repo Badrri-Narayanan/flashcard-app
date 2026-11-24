@@ -7,6 +7,7 @@ import StudyHome from './study/StudyHome';
 import StudyPage from './study/StudyPage';
 import TroublePage from './trouble/TroublePage';
 import ImportPage from './import/ImportPage';
+import StatsPage from './stats/StatsPage';
 import SharePreviewPage from './share/SharePreviewPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
       { path: '/study/:scope/:id/:mode', element: <StudyPage /> },
       { path: '/trouble', element: <TroublePage /> },
       { path: '/import', element: <ImportPage /> },
+      { path: '/stats', element: <StatsPage /> },
       { path: '/share/*', element: <SharePreviewPage /> },
       { path: '*', element: <ComingSoonPage /> },
     ],

@@ -7,6 +7,7 @@ import { repo } from '../../src/data/repo';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
 import type { Card, Deck } from '../../src/domain/types';
+import { DEFAULT_SETTINGS, SettingsContext } from '../../src/ui/settings/settings';
 import { routes } from '../../src/ui/routes';
 
 let blobs: Blob[];
@@ -47,7 +48,7 @@ describe('export menu', () => {
   it('downloads a BOM-prefixed CSV with a slugged dated filename and revokes the URL', async () => {
     await repo.saveDeck(deck);
     await repo.saveCards([card]);
-    render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [`/deck/${deck.id}`] })} />);
+    render(<SettingsContext.Provider value={[DEFAULT_SETTINGS, () => undefined]}><RouterProvider router={createMemoryRouter(routes, { initialEntries: [`/deck/${deck.id}`] })} /></SettingsContext.Provider>);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Export…' }));
     await user.click(screen.getByRole('button', { name: 'Download CSV' }));
@@ -62,7 +63,7 @@ describe('export menu', () => {
   });
 
   it('library export offers JSON only; a deck export also offers CSV, share and print', async () => {
-    render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/'] })} />);
+    render(<SettingsContext.Provider value={[DEFAULT_SETTINGS, () => undefined]}><RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/'] })} /></SettingsContext.Provider>);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Export…' }));
     expect(screen.getByRole('button', { name: 'Download JSON backup' })).toBeInTheDocument();

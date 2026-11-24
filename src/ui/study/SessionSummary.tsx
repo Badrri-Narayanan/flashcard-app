@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useDailyProgress } from '../hooks/useDailyProgress';
 import { strings } from '../strings';
 import { formatDuration } from './format';
 
@@ -16,6 +17,13 @@ const button = 'inline-flex min-h-11 items-center justify-center rounded-lg px-5
 
 export default function SessionSummary({ studied, accuracy, timeMs, backTo, onStudyMore, onUndo }: Props) {
   const s = strings.study.summary;
+  const progress = useDailyProgress(true);
+  const streakText = progress?.streak
+    ? progress.streak.current > 0 ? s.streak(progress.streak.current) : s.noStreak
+    : null;
+  const goalText = progress
+    ? progress.today >= progress.goal ? s.goalMet : s.goalRemaining(progress.goal - progress.today)
+    : null;
   const stats: [string, string][] = [
     [s.studied, String(studied)],
     [s.accuracy, `${accuracy}%`],
@@ -32,6 +40,11 @@ export default function SessionSummary({ studied, accuracy, timeMs, backTo, onSt
           </div>
         ))}
       </dl>
+      {streakText && goalText && (
+        <p className="text-sm text-slate-700 dark:text-slate-300">
+          <span className="font-semibold">{streakText}</span> · {goalText}
+        </p>
+      )}
       <div className="flex flex-wrap justify-center gap-2">
         {onStudyMore && (
           <button type="button" onClick={onStudyMore} className={`${button} bg-accent-600 text-white hover:bg-accent-700`}>

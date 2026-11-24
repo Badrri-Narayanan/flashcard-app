@@ -7,6 +7,7 @@ import { repo } from '../../src/data/repo';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
 import type { Card, Deck, Folder } from '../../src/domain/types';
+import { DEFAULT_SETTINGS, SettingsContext } from '../../src/ui/settings/settings';
 import { routes } from '../../src/ui/routes';
 import ToastRegion from '../../src/ui/components/ToastRegion';
 
@@ -35,7 +36,7 @@ function mkCard(deckId: string, over: Partial<Card> = {}): Card {
 
 function renderAt(path = '/') {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
-  render(<RouterProvider router={router} />);
+  render(<SettingsContext.Provider value={[DEFAULT_SETTINGS, () => undefined]}><RouterProvider router={router} /></SettingsContext.Provider>);
   return router;
 }
 
