@@ -303,4 +303,21 @@ describe('DexieRepository', () => {
     expect(after.every((i) => i.lapses === 0 && i.stability === 3)).toBe(true);
     expect(await repo.listLogs()).toHaveLength(0);
   });
+
+  it('listLogsForCard returns only that card\'s live logs, newest first, capped', async () => {
+    const deck = mkDeck();
+    await repo.saveDeck(deck);
+    const a = mkCard(deck.id);
+    const b = mkCard(deck.id);
+    await repo.saveCards([a, b]);
+    const mk = (cardId: string, at: number) => ({
+      ...baseRecord(), reviewItemId: 'i', cardId, deckId: deck.id, mode: 'quiz' as const, rating: null,
+      correct: true, confidence: null, durationMs: 1, at, dayKey: '2026-01-01',
+    });
+    const logs = [mk(a.id, 100), mk(a.id, 300), mk(a.id, 200), mk(a.id, 400), mk(b.id, 500)];
+    for (const l of logs) await repo.saveReview(null, l);
+    await repo.deleteLog(logs[3].id);
+    expect((await repo.listLogsForCard(a.id, 10)).map((l) => l.at)).toEqual([300, 200, 100]);
+    expect((await repo.listLogsForCard(a.id, 2)).map((l) => l.at)).toEqual([300, 200]);
+  });
 });

@@ -335,6 +335,11 @@ export class DexieRepository implements Repository {
     return logs.filter((l) => isLive(l) && (!decks || decks.has(l.deckId)));
   }
 
+  async listLogsForCard(cardId: Id, limit: number): Promise<ReviewLog[]> {
+    const logs = (await this.db.reviewLogs.where('cardId').equals(cardId).toArray()).filter(isLive);
+    return logs.sort((a, b) => b.at - a.at).slice(0, limit);
+  }
+
   async getFirstLearnLogTimes(reviewItemIds: Id[]): Promise<Map<Id, number>> {
     const logs = await this.db.reviewLogs.where('reviewItemId').anyOf(reviewItemIds).toArray();
     const first = new Map<Id, number>();

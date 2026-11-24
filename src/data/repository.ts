@@ -55,6 +55,8 @@ export interface Repository {
   /** Writes review items as given, with no log; for maintenance such as clearing lapses. */
   saveReviewItems(items: ReviewItem[]): Promise<void>;
   listLogs(range?: { from: number; to: number }, deckIds?: Id[]): Promise<ReviewLog[]>;
+  /** Newest `limit` live logs for one card, newest first, via the cardId index. */
+  listLogsForCard(cardId: Id, limit: number): Promise<ReviewLog[]>;
   /** Earliest `at` among live learn-mode logs per review item; items with no learn log are absent. */
   getFirstLearnLogTimes(reviewItemIds: Id[]): Promise<Map<Id, number>>;
   /** Soft-deletes one log (used by undo). */

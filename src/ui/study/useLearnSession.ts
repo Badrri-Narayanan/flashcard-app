@@ -66,13 +66,7 @@ const RECENT_LOG_LIMIT = 20;
 
 const isLive = (r: { deletedAt: number | null } | undefined): boolean => !!r && r.deletedAt === null;
 
-async function recentCardLogs(card: Card): Promise<ReviewLog[]> {
-  const logs = await repo.listLogs(undefined, [card.deckId]);
-  return logs
-    .filter((l) => l.cardId === card.id)
-    .sort((a, b) => b.at - a.at)
-    .slice(0, RECENT_LOG_LIMIT);
-}
+const recentCardLogs = (card: Card): Promise<ReviewLog[]> => repo.listLogsForCard(card.id, RECENT_LOG_LIMIT);
 
 export function useLearnSession(deckIds: Id[]): LearnSession {
   const [{ dayStartHour }] = useSettings();
