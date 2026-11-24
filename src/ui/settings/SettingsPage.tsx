@@ -1,5 +1,7 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { getLastBackupAt } from '../../data/backupIO';
 import { repo } from '../../data/repo';
 import Dialog from '../components/Dialog';
 import { runExport } from '../library/runExport';
@@ -155,6 +157,7 @@ export default function SettingsPage() {
   const [s, patch] = useSettings();
   const t = strings.settings;
   const storage = useStorageInfo();
+  const lastBackupAt = useLiveQuery(getLastBackupAt, []);
   const [goalText, setGoalText] = useState(String(s.dailyGoal));
   const [exportError, setExportError] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -173,8 +176,6 @@ export default function SettingsPage() {
     setExportError(false);
     try {
       await runExport('library', null, 'json', false);
-      const stored = await repo.getKV<Partial<AppSettings>>('settings');
-      if (stored?.lastBackupAt) patch({ lastBackupAt: stored.lastBackupAt });
     } catch (err) {
       console.error('Failed to export', err);
       setExportError(true);
@@ -275,7 +276,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex justify-between gap-2">
             <dt>{t.lastBackup}</dt>
-            <dd>{s.lastBackupAt ? new Date(s.lastBackupAt).toLocaleDateString() : t.never}</dd>
+            <dd>{lastBackupAt ? new Date(lastBackupAt).toLocaleDateString() : t.never}</dd>
           </div>
         </dl>
         {storage.canPersist && storage.persisted === false && (

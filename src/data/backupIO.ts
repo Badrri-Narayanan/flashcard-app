@@ -15,6 +15,7 @@ import { repo } from './repo';
 
 export const MAX_BACKUP_BYTES = 300 * 1024 * 1024;
 const SETTINGS_KEY = 'settings';
+const LAST_BACKUP_KEY = 'lastBackupAt';
 const MEDIA_REF = /media:([\w-]+)/g;
 
 function readAs<T extends string | ArrayBuffer>(read: (r: FileReader) => void): Promise<T> {
@@ -59,8 +60,15 @@ function folderSubtree(rootId: Id, folders: Folder[]): Folder[] {
 }
 
 async function stampLibraryBackup(at: number): Promise<void> {
-  const stored = await repo.getKV<Record<string, unknown>>(SETTINGS_KEY);
-  await repo.setKV(SETTINGS_KEY, { ...(stored ?? {}), lastBackupAt: at });
+  await repo.setKV(LAST_BACKUP_KEY, at);
+}
+
+/** When the whole library was last exported; falls back to the value older versions kept inside the settings blob. */
+export async function getLastBackupAt(): Promise<number | null> {
+  const own = await repo.getKV<number>(LAST_BACKUP_KEY);
+  if (typeof own === 'number') return own;
+  const legacy = (await repo.getKV<{ lastBackupAt?: number | null }>(SETTINGS_KEY))?.lastBackupAt;
+  return typeof legacy === 'number' ? legacy : null;
 }
 
 /** Builds the backup as string parts, one deck (and one media item) at a time, so no giant string is ever held. */

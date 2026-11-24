@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyImport, exportBackup, readBackupFile } from '../../src/data/backupIO';
+import { applyImport, exportBackup, getLastBackupAt, readBackupFile } from '../../src/data/backupIO';
 import { db } from '../../src/data/db';
 import { repo } from '../../src/data/repo';
 import { planImport, validateBackup } from '../../src/domain/backup';
@@ -197,16 +197,21 @@ describe('backupIO', () => {
     expect(f.scope).toBe('folder');
   });
 
-  it('library export stamps lastBackupAt without clobbering other settings', async () => {
-    await repo.setKV('settings', { theme: 'dark', lastBackupAt: null });
+  it('library export stamps its own lastBackupAt key and leaves settings untouched', async () => {
+    await repo.setKV('settings', { theme: 'dark' });
+    expect(await getLastBackupAt()).toBeNull();
     await exportBackup('library', null, { includeHistory: false });
-    const stored = await repo.getKV<{ theme: string; lastBackupAt: number }>('settings');
-    expect(stored?.theme).toBe('dark');
-    expect(stored?.lastBackupAt).toBeGreaterThan(0);
-    await repo.setKV('settings', { lastBackupAt: null });
+    expect(await getLastBackupAt()).toBeGreaterThan(0);
+    expect(await repo.getKV('settings')).toEqual({ theme: 'dark' });
+  });
+
+  it('deck export does not stamp, and a legacy settings value is the fallback', async () => {
+    await repo.setKV('settings', { lastBackupAt: 123 });
     const s = await seed();
     await exportBackup('deck', s.d.id, { includeHistory: false });
-    expect((await repo.getKV<{ lastBackupAt: number | null }>('settings'))?.lastBackupAt).toBeNull();
+    expect(await getLastBackupAt()).toBe(123);
+    await repo.setKV('lastBackupAt', 456);
+    expect(await getLastBackupAt()).toBe(456);
   });
 
   it('rejects malformed JSON without writing', async () => {

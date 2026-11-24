@@ -15,7 +15,6 @@ export interface AppSettings {
   autoReadAloud: boolean;
   confidencePromptDefault: boolean;
   showKeyboardHints: boolean;
-  lastBackupAt: number | null;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -33,7 +32,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoReadAloud: false,
   confidencePromptDefault: true,
   showKeyboardHints: true,
-  lastBackupAt: null,
 };
 
 export type SettingsContextValue = [AppSettings, (patch: Partial<AppSettings>) => void];

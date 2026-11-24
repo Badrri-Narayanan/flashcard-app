@@ -3,9 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/data/db';
+import { getLastBackupAt } from '../../src/data/backupIO';
 import { repo } from '../../src/data/repo';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
+import { runExport } from '../../src/ui/library/runExport';
 import SettingsPage from '../../src/ui/settings/SettingsPage';
 import { SettingsProvider } from '../../src/ui/settings/SettingsProvider';
 
@@ -116,5 +118,31 @@ describe('SettingsPage', () => {
     await waitFor(() => expect(names).toHaveLength(1));
     expect(names[0]).toMatch(/flashcards-library-.*\.json$/);
     expect(screen.getByRole('link', { name: 'Import' })).toHaveAttribute('href', '/import');
+  });
+
+  it('shows the new last-backup date after an export without a reload', async () => {
+    URL.createObjectURL = () => 'blob:x';
+    URL.revokeObjectURL = () => undefined;
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    renderPage();
+    expect(screen.getByText('Never')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Export library' }));
+    await waitFor(() => expect(screen.queryByText('Never')).not.toBeInTheDocument());
+  });
+
+  it('a settings change after a library export keeps lastBackupAt', async () => {
+    URL.createObjectURL = () => 'blob:x';
+    URL.revokeObjectURL = () => undefined;
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    renderPage();
+    await runExport('library', null, 'json', false);
+    const stamped = await getLastBackupAt();
+    expect(stamped).toBeGreaterThan(0);
+    await user.selectOptions(screen.getByLabelText('Theme'), 'dark');
+    await waitFor(async () => expect((await repo.getKV<{ theme: string }>('settings'))?.theme).toBe('dark'));
+    expect(await getLastBackupAt()).toBe(stamped);
+    await waitFor(() => expect(screen.queryByText('Never')).not.toBeInTheDocument());
   });
 });
