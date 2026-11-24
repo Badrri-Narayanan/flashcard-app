@@ -12,25 +12,33 @@ import SharePreviewPage from './share/SharePreviewPage';
 import PrintPage from './print/PrintPage';
 import SettingsPage from './settings/SettingsPage';
 import ComingSoonPage from './pages/ComingSoonPage';
+import RouteError from './layout/RouteError';
 
 /** Later tasks add their routes here, before the catch-all. */
 export const routes: RouteObject[] = [
-  { path: '/print/:deckId/:layout?', element: <PrintPage /> },
+  { path: '/print/:deckId/:layout?', element: <PrintPage />, errorElement: <RouteError /> },
   {
     element: <AppShell />,
+    errorElement: <RouteError />,
     children: [
-      { path: '/', element: <LibraryPage /> },
-      { path: '/folder/:id', element: <LibraryPage /> },
-      { path: '/deck/:id', element: <DeckPage /> },
-      { path: '/deck/:id/edit/:cardId?', element: <CardEditor /> },
-      { path: '/study', element: <StudyHome /> },
-      { path: '/study/:scope/:id/:mode', element: <StudyPage /> },
-      { path: '/trouble', element: <TroublePage /> },
-      { path: '/import', element: <ImportPage /> },
-      { path: '/stats', element: <StatsPage /> },
-      { path: '/share/*', element: <SharePreviewPage /> },
-      { path: '/settings', element: <SettingsPage /> },
-      { path: '*', element: <ComingSoonPage /> },
+      {
+        // Pathless so a failing page is replaced inside the shell, keeping the nav and storage banner.
+        errorElement: <RouteError />,
+        children: [
+          { path: '/', element: <LibraryPage /> },
+          { path: '/folder/:id', element: <LibraryPage /> },
+          { path: '/deck/:id', element: <DeckPage /> },
+          { path: '/deck/:id/edit/:cardId?', element: <CardEditor /> },
+          { path: '/study', element: <StudyHome /> },
+          { path: '/study/:scope/:id/:mode', element: <StudyPage /> },
+          { path: '/trouble', element: <TroublePage /> },
+          { path: '/import', element: <ImportPage /> },
+          { path: '/stats', element: <StatsPage /> },
+          { path: '/share/*', element: <SharePreviewPage /> },
+          { path: '/settings', element: <SettingsPage /> },
+          { path: '*', element: <ComingSoonPage /> },
+        ],
+      },
     ],
   },
 ];

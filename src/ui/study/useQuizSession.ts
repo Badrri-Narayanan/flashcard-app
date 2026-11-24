@@ -5,6 +5,7 @@ import { canQuiz, pickOptions, quizPrompt, shuffled } from '../../domain/distrac
 import { baseRecord } from '../../domain/ids';
 import { mulberry32 } from '../../domain/queue';
 import type { Card, Deck, Id, ReviewLog } from '../../domain/types';
+import { useLoadRetry } from '../hooks/useLoadRetry';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { loadScopeCards } from './loadScopeCards';
@@ -29,6 +30,9 @@ export interface QuizResult {
 
 export interface QuizSession {
   loading: boolean;
+  /** True when the cards could not be read; `retry` loads again. */
+  loadFailed: boolean;
+  retry(): void;
   /** False when the scope has too few non-suspended cards to build a quiz. */
   available: boolean;
   questions: QuizQuestion[];
@@ -79,6 +83,8 @@ export function useQuizSession(deckIds: Id[]): QuizSession {
   const busy = useRef(false);
   const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
   const noticeId = useRef(0);
+  const load = useLoadRetry();
+  const { attempt, fail } = load;
 
   useEffect(() => {
     let cancelled = false;
@@ -91,12 +97,12 @@ export function useQuizSession(deckIds: Id[]): QuizSession {
       setLoaded({ available, questions });
     })().catch((err: unknown) => {
       console.error('Failed to load quiz session', err);
-      if (!cancelled) setLoaded({ available: true, questions: [] });
+      if (!cancelled) fail(err);
     });
     return () => {
       cancelled = true;
     };
-  }, [deckKey]);
+  }, [deckKey, attempt, fail]);
 
   const questions = loaded?.questions ?? [];
   const current = questions[index] ?? null;
@@ -152,6 +158,8 @@ export function useQuizSession(deckIds: Id[]): QuizSession {
 
   return {
     loading: loaded === null,
+    loadFailed: load.failed,
+    retry: load.retry,
     available: loaded?.available ?? true,
     questions,
     index,

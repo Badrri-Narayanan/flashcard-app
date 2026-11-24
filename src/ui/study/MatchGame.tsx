@@ -5,6 +5,7 @@ import ToastRegion from '../components/ToastRegion';
 import { strings } from '../strings';
 import { formatDuration } from './format';
 import KeyboardHelp from './KeyboardHelp';
+import LoadError from '../components/LoadError';
 import StudyNotice from './StudyNotice';
 import StudyTopBar from './StudyTopBar';
 import { isWideViewport, usePrefersReducedMotion } from './useKeyHints';
@@ -31,6 +32,7 @@ function Round({ deckIds, backTo, trackBest, onPlayAgain }: Props & { onPlayAgai
 
   useStudyKeys({ '?': () => setHelpOpen(true) }, !g.finished && !g.loading);
 
+  if (g.loadFailed) return <LoadError onRetry={g.retry} backTo={backTo} />;
   if (g.loading) return <p className="p-8 text-center">{strings.common.loading}</p>;
   if (!g.available) return <StudyNotice text={m.needMoreCards} backTo={backTo} />;
 

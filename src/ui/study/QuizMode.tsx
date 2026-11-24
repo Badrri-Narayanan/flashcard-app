@@ -7,6 +7,7 @@ import SpeakButton from '../speech/SpeakButton';
 import { strings } from '../strings';
 import KeyboardHelp from './KeyboardHelp';
 import SessionSummary from './SessionSummary';
+import LoadError from '../components/LoadError';
 import StudyNotice from './StudyNotice';
 import StudyTopBar from './StudyTopBar';
 import { useKeyHints } from './useKeyHints';
@@ -44,6 +45,7 @@ export default function QuizMode({ deckIds, backTo, learnHref }: Props) {
     !s.finished && !s.loading,
   );
 
+  if (s.loadFailed) return <LoadError onRetry={s.retry} backTo={backTo} />;
   if (s.loading) return <p className="p-8 text-center">{strings.common.loading}</p>;
   if (!s.available) return <StudyNotice text={q.needMoreCards} backTo={backTo} />;
   if (s.questions.length === 0) return <StudyNotice text={q.empty} backTo={backTo} />;

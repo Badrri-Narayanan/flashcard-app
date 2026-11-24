@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { repo } from '../../data/repo';
 import type { Card, Deck } from '../../domain/types';
 import CardContent from '../components/CardContent';
+import LoadError from '../components/LoadError';
+import { useLoadRetry } from '../hooks/useLoadRetry';
 import { strings } from '../strings';
 import './print.css';
 import {
@@ -120,6 +122,8 @@ export default function PrintPage() {
   const [showKey, setShowKey] = useState(true);
   const [perPage, setPerPage] = useState<PerPage>(8);
   const [paper, setPaper] = useState<Paper>('a4');
+  const load = useLoadRetry();
+  const { attempt, fail } = load;
 
   useEffect(() => {
     let cancelled = false;
@@ -129,11 +133,14 @@ export default function PrintPage() {
       if (!deck || deck.deletedAt !== null) return setLoaded({ deckId, data: null });
       const cards = (await repo.listCards(deckId)).sort((a, b) => a.createdAt - b.createdAt);
       if (!cancelled) setLoaded({ deckId, data: { deck, cards } });
-    })();
+    })().catch((err: unknown) => {
+      console.error('Failed to load deck for printing', err);
+      if (!cancelled) fail(err);
+    });
     return () => {
       cancelled = true;
     };
-  }, [deckId]);
+  }, [deckId, attempt, fail]);
 
   const content = useMemo(() => {
     const data = loaded?.data;
@@ -142,6 +149,7 @@ export default function PrintPage() {
     return { quiz: null, items: toPrintItems(data.cards, data.deck) };
   }, [loaded, layout]);
 
+  if (load.failed) return <LoadError onRetry={load.retry} backTo={`/deck/${deckId}`} />;
   if (loaded?.deckId !== deckId) return <p className="p-8 text-center">{strings.common.loading}</p>;
   if (!loaded.data) return <p className="p-8 text-center">{p.notFound}</p>;
   const { deck } = loaded.data;

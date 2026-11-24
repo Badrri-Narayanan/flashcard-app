@@ -6,6 +6,7 @@ import { baseRecord } from '../../domain/ids';
 import { stripMarkdown } from '../../domain/matcher';
 import { mulberry32 } from '../../domain/queue';
 import type { Card, Id, ReviewLog } from '../../domain/types';
+import { useLoadRetry } from '../hooks/useLoadRetry';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { loadScopeCards } from './loadScopeCards';
@@ -21,6 +22,9 @@ export interface Tile {
 
 export interface MatchGame {
   loading: boolean;
+  /** True when the cards could not be read; `retry` loads again. */
+  loadFailed: boolean;
+  retry(): void;
   /** False when the scope has too few non-suspended cards. */
   available: boolean;
   tiles: Tile[];
@@ -92,6 +96,8 @@ export function useMatchGame(deckIds: Id[], pairTarget: number, trackBest: boole
   const wrongPairs = useRef(new Set<Id>());
   const pending = useRef<Promise<void>[]>([]);
   const shakeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const load = useLoadRetry();
+  const { attempt, fail: failLoad } = load;
 
   useEffect(() => {
     let cancelled = false;
@@ -110,12 +116,12 @@ export function useMatchGame(deckIds: Id[], pairTarget: number, trackBest: boole
       setLoaded({ available: available && pairs.length >= MIN_MATCH_CARDS, pairs, tiles, startedAt });
     })().catch((err: unknown) => {
       console.error('Failed to load match game', err);
-      if (!cancelled) setLoaded({ available: true, pairs: [], tiles: [], startedAt: 0 });
+      if (!cancelled) failLoad(err);
     });
     return () => {
       cancelled = true;
     };
-  }, [deckKey, pairTarget]);
+  }, [deckKey, pairTarget, attempt, failLoad]);
 
   const playing = loaded !== null && loaded.pairs.length > 0 && !finished;
   useEffect(() => {
@@ -217,6 +223,8 @@ export function useMatchGame(deckIds: Id[], pairTarget: number, trackBest: boole
 
   return {
     loading: loaded === null,
+    loadFailed: load.failed,
+    retry: load.retry,
     available: loaded?.available ?? true,
     tiles: loaded?.tiles ?? [],
     pairCount: loaded?.pairs.length ?? 0,

@@ -17,6 +17,15 @@ export const strings = {
     loading: 'Loading…',
     goHome: 'Back to Library',
     imageNotFound: 'Image not found',
+    loadFailed: 'Could not load your cards.',
+    tryAgain: 'Try again',
+  },
+  routeError: {
+    title: 'Couldn’t read your data',
+    body: 'Something went wrong while reading your cards. Reload the app; if this keeps happening, try exporting a backup.',
+    reload: 'Reload',
+    exportBackup: 'Export backup',
+    exportFailed: 'The backup could not be created.',
   },
   comingSoon: {
     title: 'Coming soon',

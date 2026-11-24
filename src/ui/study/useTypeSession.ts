@@ -6,6 +6,7 @@ import { baseRecord } from '../../domain/ids';
 import { matchAnswer, type MatchResult } from '../../domain/matcher';
 import { mulberry32 } from '../../domain/queue';
 import type { Card, ReviewLog } from '../../domain/types';
+import { useLoadRetry } from '../hooks/useLoadRetry';
 import { useSettings } from '../settings/settings';
 import { strings } from '../strings';
 import { loadScopeCards } from './loadScopeCards';
@@ -33,6 +34,9 @@ export interface TypeResult {
 
 export interface TypeSession {
   loading: boolean;
+  /** True when the cards could not be read; `retry` loads again. */
+  loadFailed: boolean;
+  retry(): void;
   items: TypeItem[];
   index: number;
   current: TypeItem | null;
@@ -59,6 +63,8 @@ export function useTypeSession(deckIds: string[]): TypeSession {
   const busy = useRef(false);
   const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
   const noticeId = useRef(0);
+  const load = useLoadRetry();
+  const { attempt, fail: failLoad } = load;
 
   useEffect(() => {
     let cancelled = false;
@@ -85,12 +91,12 @@ export function useTypeSession(deckIds: string[]): TypeSession {
       setItems(built);
     })().catch((err: unknown) => {
       console.error('Failed to load type session', err);
-      if (!cancelled) setItems([]);
+      if (!cancelled) failLoad(err);
     });
     return () => {
       cancelled = true;
     };
-  }, [deckKey]);
+  }, [deckKey, attempt, failLoad]);
 
   const list = items ?? [];
   const current = list[index] ?? null;
@@ -169,6 +175,8 @@ export function useTypeSession(deckIds: string[]): TypeSession {
 
   return {
     loading: items === null,
+    loadFailed: load.failed,
+    retry: load.retry,
     items: list,
     index,
     current,
