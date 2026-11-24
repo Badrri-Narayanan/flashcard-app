@@ -158,17 +158,22 @@ export function useMatchGame(deckIds: Id[], pairTarget: number, trackBest: boole
       let previousBestMs: number | null = null;
       let newBest = false;
       if (trackBest && deckIds.length === 1) {
-        const deck = await repo.getDeck(deckIds[0]);
-        if (deck) {
-          previousBestMs = deck.matchBestMs;
-          newBest = deck.matchBestMs === null || finalMs < deck.matchBestMs;
-          if (newBest) await repo.saveDeck({ ...deck, matchBestMs: finalMs, updatedAt: Date.now() });
+        try {
+          const deck = await repo.getDeck(deckIds[0]);
+          if (deck) {
+            previousBestMs = deck.matchBestMs;
+            newBest = deck.matchBestMs === null || finalMs < deck.matchBestMs;
+            if (newBest) await repo.saveDeck({ ...deck, matchBestMs: finalMs, updatedAt: Date.now() });
+          }
+        } catch (err) {
+          newBest = false;
+          fail('Failed to save best time', err);
         }
       }
       setResult({ finalMs, previousBestMs, newBest });
       setFinished(true);
     },
-    [trackBest, deckIds],
+    [trackBest, deckIds, fail],
   );
 
   const pick = useCallback(
@@ -195,7 +200,7 @@ export function useMatchGame(deckIds: Id[], pairTarget: number, trackBest: boole
         lastAt.current = at;
         if (nextMatched.size >= loaded.pairs.length) {
           const penalty = wrongTries * WRONG_PENALTY_MS;
-          void finish(at - loaded.startedAt + penalty).catch((err) => fail('Failed to save best time', err));
+          void finish(at - loaded.startedAt + penalty);
         }
         return;
       }

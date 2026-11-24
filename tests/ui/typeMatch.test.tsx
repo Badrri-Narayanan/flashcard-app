@@ -207,6 +207,25 @@ describe('match game', () => {
     expect((await repo.getDeck(deck.id))?.matchBestMs).toBe(1);
   });
 
+  it('still shows the result screen when saving the best time fails', async () => {
+    const user = userEvent.setup();
+    const deck = await seed(3);
+    await startGame(user, deck);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const save = vi.spyOn(repo, 'saveDeck').mockRejectedValue(new Error('disk full'));
+    for (const n of [1, 2, 3]) {
+      await user.click(tile(`question ${n}`));
+      await user.click(tile(`answer ${n}`));
+    }
+    expect(await screen.findByText('All matched!')).toBeInTheDocument();
+    expect(screen.queryByText('★ New best time!')).not.toBeInTheDocument();
+    expect(save).toHaveBeenCalled();
+    expect(error).toHaveBeenCalled();
+    save.mockRestore();
+    error.mockRestore();
+    expect((await repo.getDeck(deck.id))?.matchBestMs).toBeNull();
+  });
+
   it('does not save a best time for a folder scope', async () => {
     const user = userEvent.setup();
     const folder: Folder = { ...baseRecord(), parentId: null, name: 'F', description: '', color: '#6366f1', emoji: '📁', order: 0 };
