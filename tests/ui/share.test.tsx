@@ -48,6 +48,15 @@ describe('share preview', () => {
     expect(screen.queryByRole('button', { name: 'Update my copy' })).not.toBeInTheDocument();
   });
 
+  it('says how many damaged cards in the link will be left out', async () => {
+    const source = mkDeck();
+    const { payload } = buildSharePayload(source, [mkCard(source.id)], () => undefined);
+    const hostile = { ...payload, cards: [...payload.cards, { ...payload.cards[0], id: 'bad', front: 1 }] };
+    open(`/share/${encodeShare(hostile as never)}`);
+    expect(await screen.findByText('1 damaged item in this link will be left out.')).toBeInTheDocument();
+    expect(screen.getByText(/1 card/)).toBeInTheDocument();
+  });
+
   it('re-opening link offers Update when the deck was added from it', async () => {
     const source = mkDeck({ name: 'French' });
     const link = linkFor(source, [mkCard(source.id)]);

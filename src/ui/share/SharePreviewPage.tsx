@@ -28,10 +28,10 @@ export default function SharePreviewPage() {
       </section>
     );
   }
-  return <Preview payload={decoded.payload} />;
+  return <Preview payload={decoded.payload} skipped={decoded.skipped} />;
 }
 
-function Preview({ payload }: { payload: SharePayload }) {
+function Preview({ payload, skipped }: { payload: SharePayload; skipped: number }) {
   const data = useLiveQuery(async () => ({ decks: await repo.listDecks(), folders: await repo.listFolders() }), []);
   const [picking, setPicking] = useState<ShareImportMode | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,6 +71,7 @@ function Preview({ payload }: { payload: SharePayload }) {
         {strings.sharePreview.title} · {strings.sharePreview.cards(cards.length)}
       </p>
       {deck.description && <p>{deck.description}</p>}
+      {skipped > 0 && <p role="note" className="text-sm">{strings.sharePreview.skipped(skipped)}</p>}
 
       <h2 className="font-semibold">{strings.sharePreview.firstCards}</h2>
       <ul className="space-y-2">

@@ -70,8 +70,8 @@ export default function JsonImportDialog({ onClose, initialFile }: Props) {
     try {
       const plan = planImport(backup, await repo.getExistingMeta(), mode, folderId || null);
       await applyImport(plan);
-      const { added, updated, skipped } = plan.summary;
-      setSummary(strings.json.summary(added, updated, skipped));
+      const { added, updated, skipped, invalid } = plan.summary;
+      setSummary(strings.json.summary(added, updated, skipped, invalid));
       setBackup(null);
     } catch (err) {
       console.error('Failed to import backup', err);

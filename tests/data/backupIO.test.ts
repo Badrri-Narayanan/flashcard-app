@@ -4,7 +4,7 @@ import { db } from '../../src/data/db';
 import { repo } from '../../src/data/repo';
 import { planImport, validateBackup } from '../../src/domain/backup';
 import { runExport } from '../../src/ui/library/runExport';
-import { buildSharePayload } from '../../src/domain/share';
+import { buildSharePayload, decodeShare, encodeShare } from '../../src/domain/share';
 import { importShare } from '../../src/ui/share/importShare';
 import { baseRecord } from '../../src/domain/ids';
 import { DEFAULT_DECK_SETTINGS } from '../../src/domain/types';
@@ -232,6 +232,40 @@ describe('backupIO', () => {
     await importShare(payload, 'update', null);
     const items = await repo.getReviewItemsForCard(s.c.id);
     expect(items.map((i) => i.variant).sort()).toEqual(['c1', 'c2']);
+  });
+
+  it('a backup with a damaged card imports the rest and the library can still be exported', async () => {
+    const s = await seed();
+    const raw = JSON.parse(await text(await exportBackup('library', null, { includeHistory: true })));
+    raw.cards.push({ ...s.c, id: 'bad', distractors: undefined });
+    await db.delete();
+    await db.open();
+    const file = await readBackupFile(asFile(JSON.stringify(raw)));
+    const plan = planImport(file, await existingMeta(), 'update', null);
+    expect(plan.summary.invalid).toBe(1);
+    await applyImport(plan);
+    expect(await db.cards.get('bad')).toBeUndefined();
+    await expect(exportBackup('library', null, { includeHistory: true })).resolves.toBeInstanceOf(Blob);
+  });
+
+  it('a damaged share link imports its clean cards and the library can still be exported', async () => {
+    const s = await seed();
+    const { payload } = buildSharePayload(s.d, [s.c], () => undefined);
+    const hostile = { ...payload, cards: [...payload.cards, { ...payload.cards[0], id: 'bad', distractors: null }] };
+    const decoded = decodeShare(encodeShare(hostile as never));
+    if (!decoded.ok) throw new Error('should decode');
+    await db.delete();
+    await db.open();
+    await importShare(decoded.payload, 'add', null);
+    expect(await db.cards.get('bad')).toBeUndefined();
+    await expect(exportBackup('library', null, { includeHistory: true })).resolves.toBeInstanceOf(Blob);
+  });
+
+  it('export tolerates a legacy row with missing or ill-typed fields', async () => {
+    const s = await seed();
+    await db.cards.put({ ...s.c, id: 'legacy', distractors: undefined, mnemonic: 7 } as never);
+    const f = await parse(await exportBackup('library', null, { includeHistory: false }));
+    expect(f.cards.map((c) => c.id)).toContain(s.c.id);
   });
 
   it('creates fresh review items for imported cards when the backup has no history', async () => {

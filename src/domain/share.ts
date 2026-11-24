@@ -1,5 +1,6 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { SCHEMA_VERSION, type BackupFile, type BackupMedia } from './backup';
+import { isObject, parseAll, parseBackupMedia, parseCardContent, parseDeckSettings } from './records';
 import type { Card, Deck, Id } from './types';
 
 export const SHARE_URL_WARN = 8_000;
@@ -15,24 +16,36 @@ export interface SharePayload {
   media: BackupMedia[];
 }
 
-export type DecodeResult = { ok: true; payload: SharePayload } | { ok: false; reason: 'truncated' | 'invalid' };
+/** `skipped` counts damaged cards and images left out of the payload. */
+export type DecodeResult = { ok: true; payload: SharePayload; skipped: number } | { ok: false; reason: 'truncated' | 'invalid' };
 
 export function encodeShare(p: SharePayload): string {
   return compressToEncodedURIComponent(JSON.stringify(p));
 }
 
-const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+type ShareCard = SharePayload['cards'][number];
 
-function isPayload(v: unknown): v is SharePayload {
-  if (!isObject(v) || v.v !== 1 || !isObject(v.deck) || !Array.isArray(v.cards) || !Array.isArray(v.media)) return false;
+function parseShareCard(v: unknown): ShareCard | null {
+  if (!isObject(v) || typeof v.id !== 'string' || v.id === '' || typeof v.updatedAt !== 'number' || !Number.isFinite(v.updatedAt)) return null;
+  const content = parseCardContent(v);
+  return content && { id: v.id, ...content, updatedAt: v.updatedAt };
+}
+
+/** A clean payload with damaged cards and images dropped, or null when the envelope or deck is unusable. */
+function parsePayload(v: unknown): { payload: SharePayload; skipped: number } | null {
+  if (!isObject(v) || v.v !== 1 || !isObject(v.deck) || !Array.isArray(v.cards) || !Array.isArray(v.media)) return null;
   const d = v.deck;
-  if (typeof d.id !== 'string' || typeof d.name !== 'string' || !isObject(d.settings)) return false;
-  const cardsOk = v.cards.every(
-    (c) => isObject(c) && typeof c.id === 'string' && typeof c.front === 'string' && typeof c.back === 'string' &&
-      typeof c.type === 'string' && Array.isArray(c.distractors) && Array.isArray(c.tags) && typeof c.mnemonic === 'string',
-  );
-  const mediaOk = v.media.every((m) => isObject(m) && typeof m.id === 'string' && typeof m.mime === 'string' && typeof m.dataBase64 === 'string');
-  return cardsOk && mediaOk;
+  const settings = parseDeckSettings(d.settings);
+  const strings = [d.id, d.name, d.description, d.emoji, d.color];
+  if (!settings || !strings.every((s) => typeof s === 'string') || d.id === '') return null;
+  if (typeof d.updatedAt !== 'number' || !Number.isFinite(d.updatedAt)) return null;
+  const cards = parseAll(v.cards, parseShareCard);
+  const media = parseAll(v.media, parseBackupMedia);
+  const deck = {
+    id: d.id as string, name: d.name as string, description: d.description as string, emoji: d.emoji as string,
+    color: d.color as string, settings, updatedAt: d.updatedAt,
+  };
+  return { payload: { v: 1, deck, cards: cards.ok, media: media.ok }, skipped: cards.invalid + media.invalid };
 }
 
 export function decodeShare(s: string): DecodeResult {
@@ -49,7 +62,8 @@ export function decodeShare(s: string): DecodeResult {
   } catch {
     return { ok: false, reason: text.startsWith('{') ? 'truncated' : 'invalid' };
   }
-  return isPayload(raw) ? { ok: true, payload: raw } : { ok: false, reason: 'invalid' };
+  const parsed = parsePayload(raw);
+  return parsed ? { ok: true, ...parsed } : { ok: false, reason: 'invalid' };
 }
 
 function referencedMedia(cards: Pick<Card, 'front' | 'back' | 'mnemonic' | 'distractors'>[]): Id[] {

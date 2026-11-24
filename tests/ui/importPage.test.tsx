@@ -97,6 +97,16 @@ describe('import page', () => {
     expect(await repo.listCards((await repo.listDecks())[0].id)).toHaveLength(11);
   });
 
+  it('JSON import counts damaged records it skipped', async () => {
+    await setup('/import?mode=json');
+    const raw = JSON.parse(backupJson(2));
+    raw.cards.push({ ...raw.cards[0], id: 'bad', front: null });
+    const user = userEvent.setup();
+    await user.upload(await screen.findByLabelText('Backup JSON file'), new File([JSON.stringify(raw)], 'backup.json', { type: 'application/json' }));
+    await user.click(await screen.findByRole('button', { name: 'Import' }));
+    expect(await screen.findByText('Added 3, updated 0, skipped 0; 1 damaged record ignored')).toBeInTheDocument();
+  });
+
   it('a dropped .json goes through the JSON flow', async () => {
     const { page } = await setup();
     drop(page, new File([backupJson(2)], 'backup.json', { type: 'application/json' }));

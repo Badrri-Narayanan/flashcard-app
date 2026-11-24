@@ -36,9 +36,12 @@ async function blobText(blob: Blob): Promise<string> {
   return readAs<string>((r) => r.readAsText(blob));
 }
 
+/** Tolerates legacy rows with missing or ill-typed text fields, so one bad card never blocks a backup. */
 function mediaIdsIn(card: Card): Id[] {
   const ids: Id[] = [];
-  for (const text of [card.front, card.back, card.mnemonic, ...card.distractors]) {
+  const texts: unknown[] = [card.front, card.back, card.mnemonic, ...(Array.isArray(card.distractors) ? card.distractors : [])];
+  for (const text of texts) {
+    if (typeof text !== 'string') continue;
     for (const m of text.matchAll(MEDIA_REF)) ids.push(m[1]);
   }
   return ids;

@@ -43,11 +43,38 @@ describe('validateBackup', () => {
     ['ill-typed reviewItems', { ...file(), reviewItems: 'x' }],
     ['bad scope', { ...file(), scope: 'everything' }],
     ['non-numeric schemaVersion', { ...file(), schemaVersion: '1' }],
-    ['card without id', { ...file(), cards: [{ front: 'x' }] }],
-    ['media without data', { ...file(), media: [{ id: 'm', mime: 'image/png', width: 1, height: 1 }] }],
   ])('rejects %s', (_n, raw) => {
     const r = validateBackup(raw);
     expect(r.ok).toBe(false);
+  });
+
+  it('skips and counts damaged records of every kind, keeping only clean copies of the rest', () => {
+    const d = deck();
+    const c = card(d.id);
+    const good = file({ folders: [folder()], decks: [d], cards: [c], reviewItems: [item(c)], reviewLogs: [], media: [] });
+    const raw = {
+      ...good,
+      folders: [...good.folders, { ...folder(), name: null }, 'x'],
+      decks: [...good.decks, deck({ settings: { ...DEFAULT_DECK_SETTINGS, newPerDay: '20' as unknown as number } }),
+        deck({ settings: { ...DEFAULT_DECK_SETTINGS, reviewsPerDay: -1 } }), { ...deck(), settings: null }],
+      cards: [{ ...c, extra: 'dropped' }, { front: 'no id' }, { ...card(d.id), distractors: undefined },
+        { ...card(d.id), front: 5 }, { ...card(d.id), type: 'weird' }, { ...card(d.id), tags: [1] }],
+      reviewItems: [...good.reviewItems!, { ...item(c), variant: 'zzz' }, { ...item(c), due: 'soon' }],
+      reviewLogs: [{ ...baseRecord(), reviewItemId: 'i', cardId: c.id, deckId: d.id, mode: 'nap', rating: 3, correct: true,
+        confidence: null, durationMs: 1, at: 1, dayKey: 'k' }],
+      media: [{ id: 'm', mime: 'image/png', width: 1, height: 1 }, { id: 'm2', mime: 'image/png', width: 1, height: 1, dataBase64: 'AAAA' }],
+    };
+    const r = validateBackup(raw);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.file.folders).toEqual(good.folders);
+    expect(r.file.decks).toEqual(good.decks);
+    expect(r.file.cards).toEqual([c]);
+    expect(r.file.reviewItems).toEqual(good.reviewItems);
+    expect(r.file.reviewLogs).toEqual([]);
+    expect(r.file.media.map((m) => m.id)).toEqual(['m2']);
+    expect(r.file.invalid).toBe(2 + 3 + 5 + 2 + 1 + 1);
+    expect(planImport(r.file, empty(), 'update', null).summary.invalid).toBe(14);
+    expect(planImport(r.file, empty(), 'copy', null).summary.invalid).toBe(14);
   });
 
   it('rejects newer schema versions with a friendly message', () => {
@@ -65,7 +92,7 @@ describe('planImport update mode', () => {
     expect(plan.put.decks).toEqual([d]);
     expect(plan.put.cards).toEqual([c]);
     expect(plan.put.reviewItems).toHaveLength(1);
-    expect(plan.summary).toEqual({ added: 2, updated: 0, skipped: 0 });
+    expect(plan.summary).toEqual({ added: 2, updated: 0, skipped: 0, invalid: 0 });
   });
 
   it('replaces only when incoming is newer', () => {
@@ -169,7 +196,7 @@ describe('planImport copy mode', () => {
     expect(nc.front).toBe(`see ![x](media:${m1.id})`);
     expect(nc.back).toBe(`media:${m1.id} and media:${m2.id}`);
     expect(nc.mnemonic).toBe(`media:${m2.id}`);
-    expect(plan.summary).toEqual({ added: 3, updated: 0, skipped: 0 });
+    expect(plan.summary).toEqual({ added: 3, updated: 0, skipped: 0, invalid: 0 });
   });
 
   it('puts file-root decks under the target folder, or at the root when null', () => {

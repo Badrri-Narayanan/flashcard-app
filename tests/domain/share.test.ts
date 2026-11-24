@@ -41,7 +41,7 @@ describe('share payloads', () => {
     const d = deck();
     const { payload } = buildSharePayload(d, [card(d.id), card(d.id, { front: 'adiós 🌍' })], () => undefined);
     const decoded = decodeShare(encodeShare(payload));
-    expect(decoded).toEqual({ ok: true, payload });
+    expect(decoded).toEqual({ ok: true, payload, skipped: 0 });
     expect(payload.deck).not.toHaveProperty('order');
     expect(payload.cards[0]).not.toHaveProperty('suspended');
     expect(payload).not.toHaveProperty('reviewItems');
@@ -60,6 +60,23 @@ describe('share payloads', () => {
     expect(decodeShare('!!!not-a-share!!!')).toMatchObject({ ok: false });
     const wrong = encodeShare({ v: 2 } as never);
     expect(decodeShare(wrong)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('skips and counts damaged cards and images, and rejects a deck with bad settings', () => {
+    const d = deck();
+    const { payload } = buildSharePayload(d, [card(d.id)], () => undefined);
+    const hostile = {
+      ...payload,
+      cards: [...payload.cards, { ...payload.cards[0], id: 'x1', distractors: [1, 2] }, { ...payload.cards[0], id: 'x2', tags: 'a' },
+        { ...payload.cards[0], id: 'x3', type: 'weird' }, { ...payload.cards[0], id: 'x4', langFront: 5 },
+        { ...payload.cards[0], id: 'x5', updatedAt: 'now' }],
+      media: [{ id: 'm', mime: 'text/html', width: 1, height: 1, dataBase64: 'AAAA' }],
+    };
+    expect(decodeShare(encodeShare(hostile as never))).toEqual({ ok: true, payload, skipped: 6 });
+    for (const settings of [{ ...DEFAULT_DECK_SETTINGS, newPerDay: '20' }, { ...DEFAULT_DECK_SETTINGS, newPerDay: -1 }, null]) {
+      expect(decodeShare(encodeShare({ ...payload, deck: { ...payload.deck, settings } } as never))).toEqual({ ok: false, reason: 'invalid' });
+    }
+    expect(decodeShare(encodeShare({ ...payload, deck: { ...payload.deck, updatedAt: 'x' } } as never))).toEqual({ ok: false, reason: 'invalid' });
   });
 
   it('buildSharePayload drops images over budget and reports count', () => {

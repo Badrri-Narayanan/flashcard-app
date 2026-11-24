@@ -317,7 +317,9 @@ export const strings = {
     topLevel: 'Library (top level)',
     submit: 'Import',
     importing: 'Importing…',
-    summary: (added: number, updated: number, skipped: number) => `Added ${added}, updated ${updated}, skipped ${skipped}`,
+    summary: (added: number, updated: number, skipped: number, invalid: number) =>
+      `Added ${added}, updated ${updated}, skipped ${skipped}` +
+      (invalid === 0 ? '' : invalid === 1 ? '; 1 damaged record ignored' : `; ${invalid} damaged records ignored`),
     failed: 'Could not import the backup. Nothing was changed.',
     done: 'Done',
   },
@@ -605,6 +607,7 @@ export const strings = {
     errorTruncated: 'This link looks incomplete; it may have been cut off when it was copied or sent. Ask for the link again.',
     errorInvalid: 'This link is not a valid share link.',
     errorTitle: 'Link problem',
+    skipped: (n: number) => (n === 1 ? '1 damaged item in this link will be left out.' : `${n} damaged items in this link will be left out.`),
   },
   pwa: {
     updateAvailable: 'New version available',

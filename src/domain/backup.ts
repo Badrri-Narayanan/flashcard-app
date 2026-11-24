@@ -1,4 +1,14 @@
 import { newId, now } from './ids';
+import {
+  isObject,
+  parseAll,
+  parseBackupMedia,
+  parseCard,
+  parseDeck,
+  parseFolder,
+  parseReviewItem,
+  parseReviewLog,
+} from './records';
 import type { Card, Deck, Folder, Id, Media, ReviewItem, ReviewLog } from './types';
 
 export const SCHEMA_VERSION = 1;
@@ -25,19 +35,18 @@ export interface BackupFile {
   reviewItems?: ReviewItem[];
   reviewLogs?: ReviewLog[];
   media: BackupMedia[];
+  /** Damaged records dropped while reading the file; never written to a file. */
+  invalid?: number;
 }
 
 export type BackupValidation = { ok: true; file: BackupFile } | { ok: false; error: string };
 
-const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-
-function recordsError(name: string, v: unknown, required: boolean): string | null {
+function listError(name: string, v: unknown, required: boolean): string | null {
   if (v === undefined && !required) return null;
-  if (!Array.isArray(v)) return `The backup is missing its "${name}" list.`;
-  if (!v.every((r) => isObject(r) && typeof r.id === 'string')) return `The backup has a malformed entry in "${name}".`;
-  return null;
+  return Array.isArray(v) ? null : `The backup is missing its "${name}" list.`;
 }
 
+/** Checks the envelope strictly; damaged records inside the lists are dropped and counted in `file.invalid`. */
 export function validateBackup(raw: unknown): BackupValidation {
   if (!isObject(raw)) return { ok: false, error: 'This file is not a flashcards backup.' };
   if (raw.app !== 'flashcards') return { ok: false, error: 'This file is not a flashcards backup.' };
@@ -50,18 +59,34 @@ export function validateBackup(raw: unknown): BackupValidation {
   if (typeof raw.exportedAt !== 'number') return { ok: false, error: 'The backup has no export date.' };
   if (typeof raw.scope !== 'string' || !SCOPES.includes(raw.scope)) return { ok: false, error: 'The backup has an invalid scope.' };
   const error =
-    recordsError('folders', raw.folders, true) ??
-    recordsError('decks', raw.decks, true) ??
-    recordsError('cards', raw.cards, true) ??
-    recordsError('reviewItems', raw.reviewItems, false) ??
-    recordsError('reviewLogs', raw.reviewLogs, false) ??
-    recordsError('media', raw.media, true);
+    listError('folders', raw.folders, true) ??
+    listError('decks', raw.decks, true) ??
+    listError('cards', raw.cards, true) ??
+    listError('reviewItems', raw.reviewItems, false) ??
+    listError('reviewLogs', raw.reviewLogs, false) ??
+    listError('media', raw.media, true);
   if (error) return { ok: false, error };
-  const media = raw.media as Record<string, unknown>[];
-  if (!media.every((m) => typeof m.dataBase64 === 'string' && typeof m.mime === 'string')) {
-    return { ok: false, error: 'The backup has a malformed entry in "media".' };
-  }
-  return { ok: true, file: raw as unknown as BackupFile };
+
+  let invalid = 0;
+  const parse = <T>(list: unknown, parser: (v: unknown) => T | null): T[] => {
+    const r = parseAll(list as unknown[], parser);
+    invalid += r.invalid;
+    return r.ok;
+  };
+  const file: BackupFile = {
+    app: 'flashcards',
+    schemaVersion: raw.schemaVersion,
+    exportedAt: raw.exportedAt,
+    scope: raw.scope as BackupScope,
+    folders: parse(raw.folders, parseFolder),
+    decks: parse(raw.decks, parseDeck),
+    cards: parse(raw.cards, parseCard),
+    ...(raw.reviewItems === undefined ? {} : { reviewItems: parse(raw.reviewItems, parseReviewItem) }),
+    ...(raw.reviewLogs === undefined ? {} : { reviewLogs: parse(raw.reviewLogs, parseReviewLog) }),
+    media: parse(raw.media, parseBackupMedia),
+  };
+  if (invalid > 0) file.invalid = invalid;
+  return { ok: true, file };
 }
 
 export type MergeMode = 'update' | 'copy';
@@ -82,8 +107,8 @@ export interface MergePlan {
     reviewLogs: ReviewLog[];
     media: Media[];
   };
-  /** Counts folders, decks and cards only. */
-  summary: { added: number; updated: number; skipped: number };
+  /** Counts folders, decks and cards only; `invalid` counts damaged records of any kind dropped while reading. */
+  summary: { added: number; updated: number; skipped: number; invalid: number };
 }
 
 const BASE64_CHUNK = 0x6000; // multiple of 3 and 4-aligned output; keeps String.fromCharCode args small
@@ -160,14 +185,14 @@ function planCopy(file: BackupFile, targetFolderId: Id | null): MergePlan {
   const media = file.media.map((m) => toMedia(m, to(m.id)));
   return {
     put: { folders, decks, cards, reviewItems, reviewLogs, media },
-    summary: { added: folders.length + decks.length + cards.length, updated: 0, skipped: 0 },
+    summary: { added: folders.length + decks.length + cards.length, updated: 0, skipped: 0, invalid: file.invalid ?? 0 },
   };
 }
 
 export function planImport(file: BackupFile, existing: ExistingMeta, mode: MergeMode, targetFolderId: Id | null): MergePlan {
   if (mode === 'copy') return planCopy(file, targetFolderId);
 
-  const summary = { added: 0, updated: 0, skipped: 0 };
+  const summary = { added: 0, updated: 0, skipped: 0, invalid: file.invalid ?? 0 };
   const folderIds = new Set(file.folders.map((f) => f.id));
   const pick = <T extends { id: Id; updatedAt: number }>(
     records: T[],
