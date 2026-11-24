@@ -1,5 +1,5 @@
 import { useDrag } from '@use-gesture/react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { Rating } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import { useSettings } from '../settings/settings';
@@ -55,6 +55,22 @@ function BackFace({ faces, mnemonic, shown }: Pick<Props, 'faces' | 'mnemonic'> 
   );
 }
 
+/**
+ * One side of the animated card. The hidden side stays mounted for the 3D flip, so it is made `inert` (set as an
+ * attribute because React 18 does not know the prop): links inside it cannot be focused or clicked before reveal.
+ */
+function AnimatedFace({ hidden, className, live, children }: { hidden: boolean; className: string; live?: boolean; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.toggleAttribute('inert', hidden);
+  }, [hidden]);
+  return (
+    <div ref={ref} aria-hidden={hidden} aria-live={live ? 'polite' : undefined} className={className}>
+      {children}
+    </div>
+  );
+}
+
 const faceClass = 'min-h-48 w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900';
 
 export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRate }: Props) {
@@ -81,7 +97,9 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
     { enabled: swipeGestures, axis: 'x', filterTaps: true },
   );
 
-  const handleClick = () => {
+  const handleClick = (e: MouseEvent) => {
+    // A link inside the card is followed, not treated as a tap on the card.
+    if (e.target instanceof Element && e.target.closest('a')) return;
     if (dragged.current) {
       dragged.current = false;
       return;
@@ -116,16 +134,16 @@ export default function FlipCard({ faces, mnemonic, revealed, onFlip, onSwipeRat
             className="grid transition-transform duration-300 [transform-style:preserve-3d]"
             style={{ transform: revealed ? 'rotateY(180deg)' : 'none' }}
           >
-            <div aria-hidden={revealed} className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1]`}>
+            <AnimatedFace hidden={revealed} className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1]`}>
               <FrontFace faces={faces} shown={!revealed} />
-            </div>
-            <div
-              aria-hidden={!revealed}
-              aria-live="polite"
+            </AnimatedFace>
+            <AnimatedFace
+              hidden={!revealed}
+              live
               className={`${faceClass} [backface-visibility:hidden] [grid-area:1/1] [transform:rotateY(180deg)]`}
             >
               <BackFace faces={faces} mnemonic={mnemonic} shown={revealed} />
-            </div>
+            </AnimatedFace>
           </div>
         </div>
       ) : (
