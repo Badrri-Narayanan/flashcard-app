@@ -281,6 +281,14 @@ export const strings = {
     sheetFront: (n: number) => `Fronts, sheet ${n}`,
     sheetBack: (n: number) => `Backs, sheet ${n}`,
   },
+  speech: {
+    speak: 'Read aloud',
+    pronounce: 'Check pronunciation',
+    listening: 'Listening…',
+    verdict: { exact: 'Exact', close: 'Almost', wrong: 'Not quite' },
+    heard: (transcript: string) => `Heard: "${transcript}"`,
+    failed: "Couldn't hear that. Check microphone access and try again.",
+  },
   study: {
     homeTitle: 'Study',
     foldersHeading: 'Folders',
@@ -414,6 +422,7 @@ export const strings = {
       quizNext: 'Next question (after answering)',
       typeCheck: 'Check your answer, then go to the next card',
       typeOverride: 'Mark a wrong answer as right',
+      speak: 'Read the visible side aloud',
       matchMove: 'Move between tiles',
       matchSelect: 'Select a tile',
     },

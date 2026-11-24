@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Id } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import ToastRegion from '../components/ToastRegion';
+import SpeakButton from '../speech/SpeakButton';
 import { strings } from '../strings';
 import KeyboardHelp from './KeyboardHelp';
 import SessionSummary from './SessionSummary';
@@ -98,7 +99,12 @@ export default function QuizMode({ deckIds, backTo, learnHref }: Props) {
       <StudyTopBar backTo={backTo} done={s.index} total={s.questions.length} onHelp={() => setHelpOpen(true)} />
       <p className="text-center text-sm text-slate-600 dark:text-slate-400">{q.position(s.index + 1, s.questions.length)}</p>
       <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-        <CardContent markdown={current.question} lang={current.questionLang} />
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <CardContent markdown={current.question} lang={current.questionLang} />
+          </div>
+          <SpeakButton text={current.question} lang={current.questionLang} />
+        </div>
       </div>
       <div role="group" aria-label={q.optionsLabel} className="flex flex-1 flex-col gap-2">
         {current.options.map((option, i) => {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Id } from '../../domain/types';
 import ToastRegion from '../components/ToastRegion';
+import { useReadAloud } from '../speech/useReadAloud';
 import { strings } from '../strings';
 import { cardFaces, cramVariant } from './faces';
 import FlipCard from './FlipCard';
@@ -28,9 +29,13 @@ export default function CramMode({ deckIds, backTo }: Props) {
   const mark = (correct: boolean) => {
     if (s.revealed) void s.mark(correct);
   };
+  const { current } = s;
+  const faces = current ? cardFaces(current.card, current.deck, cramVariant(current.card)) : null;
+  const speakVisible = useReadAloud(faces, s.revealed, current?.card.id);
   useStudyKeys(
     {
       ' ': s.flip,
+      s: speakVisible,
       '1': () => mark(false),
       '3': () => mark(true),
       ArrowRight: s.next,
@@ -63,8 +68,6 @@ export default function CramMode({ deckIds, backTo }: Props) {
     );
   }
 
-  const { current } = s;
-  const faces = current ? cardFaces(current.card, current.deck, cramVariant(current.card)) : null;
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-2xl flex-col gap-4 px-4 py-4">
       <StudyTopBar backTo={backTo} done={s.index} total={s.entries.length} onHelp={() => setHelpOpen(true)} />

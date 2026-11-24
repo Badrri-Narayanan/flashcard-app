@@ -4,6 +4,7 @@ import type { DiffPart } from '../../domain/matcher';
 import type { Id } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import ToastRegion from '../components/ToastRegion';
+import SpeakButton from '../speech/SpeakButton';
 import { strings } from '../strings';
 import KeyboardHelp from './KeyboardHelp';
 import SessionSummary from './SessionSummary';
@@ -131,7 +132,12 @@ export default function TypeMode({ deckIds, backTo, learnHref }: Props) {
       <StudyTopBar backTo={backTo} done={s.index} total={s.items.length} onHelp={() => setHelpOpen(true)} />
       <p className="text-center text-sm text-slate-600 dark:text-slate-400">{t.position(s.index + 1, s.items.length)}</p>
       <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-        <CardContent markdown={current.question} lang={current.questionLang} />
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <CardContent markdown={current.question} lang={current.questionLang} />
+          </div>
+          <SpeakButton text={current.question} lang={current.questionLang} />
+        </div>
       </div>
       <form
         className="flex gap-2"

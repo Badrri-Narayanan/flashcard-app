@@ -3,6 +3,8 @@ import { useRef, useState } from 'react';
 import type { Rating } from '../../domain/types';
 import CardContent from '../components/CardContent';
 import { useSettings } from '../settings/settings';
+import PronounceButton from '../speech/PronounceButton';
+import SpeakButton from '../speech/SpeakButton';
 import { strings } from '../strings';
 import type { Faces } from './faces';
 import { swipeDecision, SWIPE_THRESHOLD_PX } from './swipe';
@@ -16,8 +18,22 @@ interface Props {
   onSwipeRate?(rating: Rating): void;
 }
 
+function SpokenPart({ text, lang, pronounce }: { text: string; lang: string; pronounce: boolean }) {
+  return (
+    <>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <CardContent markdown={text} lang={lang} />
+        </div>
+        <SpeakButton text={text} lang={lang} />
+      </div>
+      {pronounce && <PronounceButton target={text} lang={lang} />}
+    </>
+  );
+}
+
 function FrontFace({ faces }: Pick<Props, 'faces'>) {
-  return <CardContent markdown={faces.front.text} lang={faces.front.lang} />;
+  return <SpokenPart text={faces.front.text} lang={faces.front.lang} pronounce={false} />;
 }
 
 function BackFace({ faces, mnemonic }: Pick<Props, 'faces' | 'mnemonic'>) {
@@ -25,7 +41,7 @@ function BackFace({ faces, mnemonic }: Pick<Props, 'faces' | 'mnemonic'>) {
     <div className="space-y-3">
       {faces.back.map((part, i) => (
         <div key={i} className={i > 0 ? 'border-t border-slate-200 pt-3 dark:border-slate-700' : ''}>
-          <CardContent markdown={part.text} lang={part.lang} />
+          <SpokenPart text={part.text} lang={part.lang} pronounce />
         </div>
       ))}
       {mnemonic.trim() && (

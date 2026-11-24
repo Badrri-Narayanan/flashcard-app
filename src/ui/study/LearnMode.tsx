@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ToastRegion from '../components/ToastRegion';
+import { useReadAloud } from '../speech/useReadAloud';
 import { strings } from '../strings';
 import AllCaughtUp from './AllCaughtUp';
 import ConfidencePrompt from './ConfidencePrompt';
@@ -31,9 +32,12 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
   const rate = (r: Rating) => {
     if (revealed) void s.answer(r);
   };
+  const faces = current ? cardFaces(current.card, current.deck, current.item.variant) : null;
+  const speakVisible = useReadAloud(faces, revealed, current ? `${current.card.id}:${current.item.variant}` : undefined);
   useStudyKeys(
     {
       ' ': () => current && s.reveal(),
+      s: speakVisible,
       '1': () => rate(1),
       '2': () => rate(2),
       '3': () => rate(3),
@@ -68,7 +72,6 @@ export default function LearnMode({ deckIds, backTo, cramHref }: Props) {
   }
 
   const total = s.progress.done + s.progress.remaining;
-  const faces = current ? cardFaces(current.card, current.deck, current.item.variant) : null;
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-2xl flex-col gap-4 px-4 py-4">
       <StudyTopBar backTo={backTo} done={s.progress.done} total={total} onHelp={() => setHelpOpen(true)}>
